@@ -1,1 +1,0 @@
-# cetacen-photogrammetry-from-drone
