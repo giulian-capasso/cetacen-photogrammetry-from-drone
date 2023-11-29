@@ -1159,7 +1159,7 @@ FLY357_REC_MOT_clean <- distinct(FLY357_REC_MOT, `GPS:dateTimeStamp`, .keep_all 
 FLY357_REC_MOT_ready <- FLY357_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
 # Plot 
 plot_357 <- ggplot(FLY357_REC_MOT_ready) +
- # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
   labs(title = "2022-08-11 10:11:28 (FLY_357)", x = "Time", y = "Height (m)") +
   theme_minimal() +
@@ -1248,7 +1248,7 @@ LOG_0074 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0074.CSV",
 # Clean repetitions in `GPS:dateTimeStamp`
 FLY368_REC_MOT_clean1 <- distinct(FLY368_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
 # Rename FLY "`GPS:dateTimeStamp`" name 
-FLY368_REC_MOT_ready <- FLY368_REC_MOT_clean2 %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+FLY368_REC_MOT_ready <- FLY368_REC_MOT_clean1 %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
 # Merge LOG Date and Time 
 LOG_0074_R <- transform(LOG_0074, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
 # Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
@@ -1288,7 +1288,7 @@ FLY370_REC_MOT_ready <- FLY370_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS
 FLY370_REC_MOT_ready_clean <- subset(FLY370_REC_MOT_ready, !grepl("2015-10-18", GPS.dateTimeStamp))
 # Plot 
 plot_370 <- ggplot(FLY370_REC_MOT_ready_clean) +
- # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
   labs(title = "2022-08-14 07:32:11 (FLY_370)", x = "Time", y = "Height (m)") +
   theme_minimal() +
@@ -1337,8 +1337,8 @@ plot_371 <- ggplot(FLY371_REC_MOT_LD_1.2) +
 plot_371
 
 # --------------------------------------------- FLY_372 + LOG_0076 --------------------------------------------- #
- # -------------------------------------------- 2022-08-14 09:42:01 ------------------------------------------- #
-  # ------------------------------------------------ file bugs ----------------------------------------------- #
+# -------------------------------------------- 2022-08-14 09:42:01 ------------------------------------------- #
+# ------------------------------------------------ file bugs ----------------------------------------------- #
 
 # Import csv
 FLY372_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY372_REC_MOT.csv")
@@ -1371,224 +1371,224 @@ plot_372 <- ggplot(FLY372_REC_MOT_LD_1.2 ) +
         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_372
+plot_372
 # ONLY BAROMETER PLOT
- plot_372B <- ggplot(FLY372_REC_MOT) +
+plot_372B <- ggplot(FLY372_REC_MOT) +
   # geom_line(aes(x = `Clock:offsetTime`, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
-   geom_line(aes(x = `Clock:offsetTime`, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
-   labs(title = "2022-08-14 09:42:01 (FLY_372) BAR", x = "Time", y = "Height (m)") +
-   theme_minimal() +
-   theme(legend.position = c(0.9, 0.9),
-         legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-         legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
-   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_372B
- 
- # ONLY LIDAR PLOT
- # Laser data from cm to m
+  geom_line(aes(x = `Clock:offsetTime`, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
+  labs(title = "2022-08-14 09:42:01 (FLY_372) BAR", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+plot_372B
+
+# ONLY LIDAR PLOT
+# Laser data from cm to m
 LOG_0076_RM <- LOG_0076_R %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
- # Rename to meters
+# Rename to meters
 LOG_0076_RM2 <- LOG_0076_RM %>% rename(laser_altitude_m = laser_altitude_cm)
- 
- plot_372L <- ggplot(LOG_0076_RM2) +
-   geom_line(aes(x = gmt_time , y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+
+plot_372L <- ggplot(LOG_0076_RM2) +
+  geom_line(aes(x = gmt_time , y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
   # geom_line(aes(x = `Clock:offsetTime`, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
-   labs(title = "2022-08-14 09:42:01 (FLY_372) LIDAR", x = "Time", y = "Height (m)") +
-   theme_minimal() +
-   theme(legend.position = c(0.9, 0.9),
-         legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-         legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
-   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_372L
- 
-
- # --------------------------------------------- FLY_374 + LOG_0078 --------------------------------------------- #
- # -------------------------------------------- 2022-08-14 10:16:31 -------------------------------------------- #
- 
- # Import csv
- FLY374_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY374_REC_MOT.csv")
- # Import LOG 
- LOG_0078 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0078.CSV", 
-                         skip = 2)
- # Clean repetitions in `GPS:dateTimeStamp`
- FLY374_REC_MOT_clean <- distinct(FLY374_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
- # Reneme FLY "`GPS:dateTimeStamp`" name 
- FLY374_REC_MOT_ready <- FLY374_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
- # Merge LOG Date and Time 
- LOG_0078_R <- transform(LOG_0078, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
- # Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
- LOG_0078_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0078_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
- # Join FLY and LOG columns by GPS.dateTimeStamp
- FLY374_REC_MOT_LD <- left_join(FLY374_REC_MOT_ready, LOG_0078_R, by = "GPS.dateTimeStamp")
- # Laser data from cm to m
- FLY374_REC_MOT_LD_1 <- FLY374_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
- # Rename to meters
- FLY374_REC_MOT_LD_1.2 <- FLY374_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
- # Plot 
- plot_374 <- ggplot(FLY374_REC_MOT_LD_1.2) +
-   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
-   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
-   labs(title = "2022-08-14 10:16:31 (FLY_374)", x = "Time", y = "Height (m)") +
-   theme_minimal() +
-   theme(legend.position = c(0.9, 0.9),
-         legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-         legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
-   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_374
- 
- # --------------------------------------------- FLY_382 + LOG_0079 --------------------------------------------- #
- # -------------------------------------------- 2022-10-18 09:41:40 -------------------------------------------- #
- 
- # Import csv
- FLY382_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY382_REC_MOT.csv")
- # Import LOG 
- LOG_0079 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0079.CSV", 
-                         skip = 2)
- # Clean repetitions in `GPS:dateTimeStamp`
- FLY382_REC_MOT_clean <- distinct(FLY382_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
- # Reneme FLY "`GPS:dateTimeStamp`" name 
- FLY382_REC_MOT_ready <- FLY382_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
- # Merge LOG Date and Time 
- LOG_0079_R <- transform(LOG_0079, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
- # Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
- LOG_0079_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0079_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
- # Join FLY and LOG columns by GPS.dateTimeStamp
- FLY382_REC_MOT_LD <- left_join(FLY382_REC_MOT_ready, LOG_0079_R, by = "GPS.dateTimeStamp")
- # Laser data from cm to m
- FLY382_REC_MOT_LD_1 <- FLY382_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
- # Rename to meters
- FLY382_REC_MOT_LD_1.2 <- FLY382_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
- # Plot 
- plot_382 <- ggplot(FLY382_REC_MOT_LD_1.2) +
-   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
-   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
-   labs(title = "2022-10-18 09:41:40 (FLY_382)", x = "Time", y = "Height (m)") +
-   theme_minimal() +
-   theme(legend.position = c(0.9, 0.9),
-         legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-         legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
-   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_382
-
- 
- # --------------------------------------------- FLY_383 + LOG_0080 --------------------------------------------- #
- # -------------------------------------------- 2022-10-18 10:04:40 -------------------------------------------- #
- 
- # Import csv
- FLY383_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY383_REC_MOT.csv")
- # Import LOG 
- LOG_0080 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0080.CSV", 
-                         skip = 2)
- # Clean repetitions in `GPS:dateTimeStamp`
- FLY383_REC_MOT_clean <- distinct(FLY383_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
- # Reneme FLY "`GPS:dateTimeStamp`" name 
- FLY383_REC_MOT_ready <- FLY383_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
- # Merge LOG Date and Time 
- LOG_0080_R <- transform(LOG_0080, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
- # Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
- LOG_0080_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0080_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
- # Join FLY and LOG columns by GPS.dateTimeStamp
- FLY383_REC_MOT_LD <- left_join(FLY383_REC_MOT_ready, LOG_0080_R, by = "GPS.dateTimeStamp")
- # Laser data from cm to m
- FLY383_REC_MOT_LD_1 <- FLY383_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
- # Rename to meters
- FLY383_REC_MOT_LD_1.2 <- FLY383_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
- # Plot 
- plot_383 <- ggplot(FLY383_REC_MOT_LD_1.2) +
-   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
-   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
-   labs(title = "2022-10-18 10:04:40 (FLY_383)", x = "Time", y = "Height (m)") +
-   theme_minimal() +
-   theme(legend.position = c(0.9, 0.9),
-         legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-         legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
-   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_383
+  labs(title = "2022-08-14 09:42:01 (FLY_372) LIDAR", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+plot_372L
 
 
- # --------------------------------------------- FLY_384 + LOG_0081 --------------------------------------------- #
- # -------------------------------------------- 2022-10-19 10:07:31 -------------------------------------------- #
- 
- # Import csv
- FLY384_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY384_REC_MOT.csv")
- # Import LOG 
- LOG_0081 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0081.CSV", 
-                         skip = 2)
- # Clean repetitions in `GPS:dateTimeStamp`
- FLY384_REC_MOT_clean <- distinct(FLY384_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
- # Reneme FLY "`GPS:dateTimeStamp`" name 
- FLY384_REC_MOT_ready <- FLY384_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
- # Merge LOG Date and Time 
- LOG_0081_R <- transform(LOG_0081, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
- # Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
- LOG_0081_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0081_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
- # Join FLY and LOG columns by GPS.dateTimeStamp
- FLY384_REC_MOT_LD <- left_join(FLY384_REC_MOT_ready, LOG_0081_R, by = "GPS.dateTimeStamp")
- # Laser data from cm to m
- FLY384_REC_MOT_LD_1 <- FLY384_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
- # Rename to meters
- FLY384_REC_MOT_LD_1.2 <- FLY384_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
- # Plot 
- plot_384 <- ggplot(FLY384_REC_MOT_LD_1.2) +
-   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
-   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
-   labs(title = "2022-10-19 10:07:31 (FLY_384)", x = "Time", y = "Height (m)") +
-   theme_minimal() +
-   theme(legend.position = c(0.9, 0.9),
-         legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-         legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
-   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_384
+# --------------------------------------------- FLY_374 + LOG_0078 --------------------------------------------- #
+# -------------------------------------------- 2022-08-14 10:16:31 -------------------------------------------- #
 
- 
- # --------------------------------------------- FLY_387 + LOG_0084 --------------------------------------------- #
- # -------------------------------------------- 2022-10-19 11:10:10 -------------------------------------------- #
- 
- # Import csv
- FLY387_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY387_REC_MOT.csv")
- # Import LOG 
- LOG_0084 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0084.CSV", 
-                         skip = 2)
- # Clean repetitions in `GPS:dateTimeStamp`
- FLY387_REC_MOT_clean <- distinct(FLY387_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
- # Reneme FLY "`GPS:dateTimeStamp`" name 
- FLY387_REC_MOT_ready <- FLY387_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
- # Merge LOG Date and Time 
- LOG_0084_R <- transform(LOG_0084, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
- # Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
- LOG_0084_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0084_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
- # Join FLY and LOG columns by GPS.dateTimeStamp
- FLY387_REC_MOT_LD <- left_join(FLY387_REC_MOT_ready, LOG_0084_R, by = "GPS.dateTimeStamp")
- # Laser data from cm to m
- FLY387_REC_MOT_LD_1 <- FLY387_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
- # Rename to meters
- FLY387_REC_MOT_LD_1.2 <- FLY387_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
- # Plot 
- plot_387 <- ggplot(FLY387_REC_MOT_LD_1.2) +
-   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
-   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
-   labs(title = "2022-10-19 11:10:10 (FLY_387)", x = "Time", y = "Height (m)") +
-   theme_minimal() +
-   theme(legend.position = c(0.9, 0.9),
-         legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-         legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-         axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-   scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
-   theme(plot.title = element_text(size = 10, face = "bold"))
- plot_387
- 
+# Import csv
+FLY374_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY374_REC_MOT.csv")
+# Import LOG 
+LOG_0078 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0078.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY374_REC_MOT_clean <- distinct(FLY374_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Reneme FLY "`GPS:dateTimeStamp`" name 
+FLY374_REC_MOT_ready <- FLY374_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0078_R <- transform(LOG_0078, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0078_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0078_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY374_REC_MOT_LD <- left_join(FLY374_REC_MOT_ready, LOG_0078_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY374_REC_MOT_LD_1 <- FLY374_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY374_REC_MOT_LD_1.2 <- FLY374_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Plot 
+plot_374 <- ggplot(FLY374_REC_MOT_LD_1.2) +
+  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
+  labs(title = "2022-08-14 10:16:31 (FLY_374)", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+plot_374
+
+# --------------------------------------------- FLY_382 + LOG_0079 --------------------------------------------- #
+# -------------------------------------------- 2022-10-18 09:41:40 -------------------------------------------- #
+
+# Import csv
+FLY382_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY382_REC_MOT.csv")
+# Import LOG 
+LOG_0079 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0079.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY382_REC_MOT_clean <- distinct(FLY382_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Reneme FLY "`GPS:dateTimeStamp`" name 
+FLY382_REC_MOT_ready <- FLY382_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0079_R <- transform(LOG_0079, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0079_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0079_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY382_REC_MOT_LD <- left_join(FLY382_REC_MOT_ready, LOG_0079_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY382_REC_MOT_LD_1 <- FLY382_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY382_REC_MOT_LD_1.2 <- FLY382_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Plot 
+plot_382 <- ggplot(FLY382_REC_MOT_LD_1.2) +
+  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
+  labs(title = "2022-10-18 09:41:40 (FLY_382)", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+plot_382
+
+
+# --------------------------------------------- FLY_383 + LOG_0080 --------------------------------------------- #
+# -------------------------------------------- 2022-10-18 10:04:40 -------------------------------------------- #
+
+# Import csv
+FLY383_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY383_REC_MOT.csv")
+# Import LOG 
+LOG_0080 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0080.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY383_REC_MOT_clean <- distinct(FLY383_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Reneme FLY "`GPS:dateTimeStamp`" name 
+FLY383_REC_MOT_ready <- FLY383_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0080_R <- transform(LOG_0080, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0080_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0080_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY383_REC_MOT_LD <- left_join(FLY383_REC_MOT_ready, LOG_0080_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY383_REC_MOT_LD_1 <- FLY383_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY383_REC_MOT_LD_1.2 <- FLY383_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Plot 
+plot_383 <- ggplot(FLY383_REC_MOT_LD_1.2) +
+  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
+  labs(title = "2022-10-18 10:04:40 (FLY_383)", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+plot_383
+
+
+# --------------------------------------------- FLY_384 + LOG_0081 --------------------------------------------- #
+# -------------------------------------------- 2022-10-19 10:07:31 -------------------------------------------- #
+
+# Import csv
+FLY384_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY384_REC_MOT.csv")
+# Import LOG 
+LOG_0081 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0081.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY384_REC_MOT_clean <- distinct(FLY384_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Reneme FLY "`GPS:dateTimeStamp`" name 
+FLY384_REC_MOT_ready <- FLY384_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0081_R <- transform(LOG_0081, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0081_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0081_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY384_REC_MOT_LD <- left_join(FLY384_REC_MOT_ready, LOG_0081_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY384_REC_MOT_LD_1 <- FLY384_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY384_REC_MOT_LD_1.2 <- FLY384_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Plot 
+plot_384 <- ggplot(FLY384_REC_MOT_LD_1.2) +
+  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
+  labs(title = "2022-10-19 10:07:31 (FLY_384)", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+plot_384
+
+
+# --------------------------------------------- FLY_387 + LOG_0084 --------------------------------------------- #
+# -------------------------------------------- 2022-10-19 11:10:10 -------------------------------------------- #
+
+# Import csv
+FLY387_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY387_REC_MOT.csv")
+# Import LOG 
+LOG_0084 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0084.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY387_REC_MOT_clean <- distinct(FLY387_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Reneme FLY "`GPS:dateTimeStamp`" name 
+FLY387_REC_MOT_ready <- FLY387_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0084_R <- transform(LOG_0084, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0084_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0084_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY387_REC_MOT_LD <- left_join(FLY387_REC_MOT_ready, LOG_0084_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY387_REC_MOT_LD_1 <- FLY387_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY387_REC_MOT_LD_1.2 <- FLY387_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Plot 
+plot_387 <- ggplot(FLY387_REC_MOT_LD_1.2) +
+  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
+  labs(title = "2022-10-19 11:10:10 (FLY_387)", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+plot_387
+
 # --------------------------------------------- FLY_388 + LOG_0085 --------------------------------------------- #
 # -------------------------------------------- 2022-10-19 11:25:31 -------------------------------------------- #
 
@@ -1613,16 +1613,16 @@ FLY388_REC_MOT_LD_1 <- FLY388_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_al
 FLY388_REC_MOT_LD_1.2 <- FLY388_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
 # Plot 
 plot_388 <- ggplot(FLY388_REC_MOT_LD_1.2) +
- geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
- geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
- labs(title = "2022-10-19 11:25:31 (FLY_388)", x = "Time", y = "Height (m)") +
- theme_minimal() +
- theme(legend.position = c(0.9, 0.9),
-       legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-       legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-       axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
- scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
- theme(plot.title = element_text(size = 10, face = "bold")) 
+  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
+  labs(title = "2022-10-19 11:25:31 (FLY_388)", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("LIDAR" = "darkorange", "BAR" = "blue")) +
+  theme(plot.title = element_text(size = 10, face = "bold")) 
 plot_388
 
 # --------------------------------------------- FLY_389 + LOG_0086 --------------------------------------------- #
@@ -1634,9 +1634,9 @@ FLY389_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY389_REC_MOT.csv")
 LOG_0086 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0086.CSV",  
                         skip = 2)
 # Clean repetitions in `GPS:dateTimeStamp`
-FLY389_REC_MOT_clean2 <- distinct(FLY389_REC_MOT_clean1, `GPS:dateTimeStamp`, .keep_all = TRUE)
+FLY389_REC_MOT_clean <- distinct(FLY389_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
 # Reneme FLY "`GPS:dateTimeStamp`" name 
-FLY389_REC_MOT_ready <- FLY389_REC_MOT_clean2 %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+FLY389_REC_MOT_ready <- FLY389_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
 # Merge LOG Date and Time 
 LOG_0086_R <- transform(LOG_0086, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
 # Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
@@ -1858,7 +1858,7 @@ FLY406_REC_MOT_clean <- distinct(FLY406_REC_MOT, `GPS:dateTimeStamp`, .keep_all 
 FLY406_REC_MOT_ready <- FLY406_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
 # Plot 
 plot_406 <- ggplot(FLY406_REC_MOT_ready) +
-# geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
   labs(title = "2023-02-22 13:55:31 (FLY_406)", x = "Time", y = "Height (m)") +
   theme_minimal() +
@@ -3047,7 +3047,7 @@ FLY467_REC_MOT_clean <- distinct(FLY467_REC_MOT, `GPS:dateTimeStamp`, .keep_all 
 FLY467_REC_MOT_ready <- FLY467_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
 # Plot 
 plot_467 <- ggplot(FLY467_REC_MOT_ready) +
- # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
   labs(title = "2023-08-09 16:58:01 (FLY_467)", x = "Time", y = "Height (m)") +
   theme_minimal() +
@@ -3070,7 +3070,7 @@ FLY468_REC_MOT_clean <- distinct(FLY468_REC_MOT, `GPS:dateTimeStamp`, .keep_all 
 FLY468_REC_MOT_ready <- FLY468_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
 # Plot 
 plot_468 <- ggplot(FLY468_REC_MOT_ready) +
- # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  # geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
   labs(title = "2023-08-09 17:15:11 (FLY_468)", x = "Time", y = "Height (m)") +
   theme_minimal() +
@@ -3237,7 +3237,7 @@ FLY480_REC_MOT_clean <- distinct(FLY480_REC_MOT, `GPS:dateTimeStamp`, .keep_all 
 FLY480_REC_MOT_ready <- FLY480_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
 # Plot 
 plot_480 <- ggplot(FLY480_REC_MOT_ready) +
-#  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
+  #  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
   geom_line(aes(x = GPS.dateTimeStamp, y = `osd_data:relativeHeight[meters]`, color = "BAR"), size = 0.7, linetype = "solid") +
   labs(title = "2023-09-25 06:34:31 (FLY_480)", x = "Time", y = "Height (m)") +
   theme_minimal() +
@@ -3324,99 +3324,50 @@ plot_487
 
 ########### PDF #############
 
-pdf_file <- "tutti_i_plot.pdf"
-pdf(pdf_file, width = 8.5, height = 11)
-plot_list <- list()
-plot_names <- c("plot_263", "plot_264", "plot_269", "plot_270", "plot_285", "plot_288", "plot_289", 
-                "plot_296", "plot_297", "plot_298", "plot_299", "plot_304" ,"plot_307", "plot_310",
-                "plot_311", "plot_312", "plot_313", "plot_315", "plot_316" ,"plot_318", "plot_319",
-                "plot_323", "plot_327", "plot_330", "plot_332", "plot_346" ,"plot_348", "plot_349",
-                "plot_352", "plot_353", "plot_354", "plot_356", "plot_357" ,"plot_363", "plot_365",
-                "plot_368", "plot_370", "plot_371", "plot_372", "plot_374" ,"plot_382", "plot_383",
-                "plot_384", "plot_387", "plot_388", "plot_389", "plot_393" ,"plot_396", "plot_400",
-                "plot_402", "plot_406", "plot_411", "plot_412", "plot_414" ,"plot_417", "plot_420",
-                "plot_421", "plot_422", "plot_423", "plot_424", "plot_425" ,"plot_427", "plot_429",
-                "plot_430", "plot_431", "plot_434", "plot_436", "plot_437" ,"plot_438", "plot_440",
-                "plot_444", "plot_446", "plot_447", "plot_452", "plot_456" ,"plot_458", "plot_459",
-                "plot_461", "plot_462", "plot_463", "plot_464", "plot_465" ,"plot_466", "plot_467",
-                "plot_468", "plot_472", "plot_475", "plot_477", "plot_478" ,"plot_480", "plot_484","plot_487")
+pdf("combined_plots3.pdf", width = 16, height = 8.5)
 
-for (nome in plot_names) {
-  plot_list[[nome]] <- get(nome)
-}
-nplot <- length(plot_names)
-plot_per_pagina <- 4
-numero_di_pagine <- ceiling(nplot / plot_per_pagina)
-for (pag in 1:numero_di_pagine) {
-  par(mfrow = c(2, 2))
-  plot_list_temp <- list()
-  for (i in 1:plot_per_pagina) {
-    index <- (pag - 1) * plot_per_pagina + i
-    if (index <= nplot) {
-      plot_list_temp[[plot_names[index]]] <- plot_list[[plot_names[index]]]
-    }
-  }
-  for (nome in names(plot_list_temp)) {
-    print(plot_list_temp[[nome]])
-  }
+# Lista dei tuoi grafici
+plots <- list(
+  plot_263, plot_264, plot_269, plot_270, plot_285, plot_288, plot_289,
+  plot_296, plot_297, plot_298, plot_299, plot_304, plot_307, plot_310,
+  plot_311, plot_312, plot_313, plot_315, plot_316, plot_318, plot_319,
+  plot_323, plot_327, plot_330, plot_332, plot_346, plot_348, plot_349,
+  plot_352, plot_353, plot_354, plot_356, plot_357, plot_363, plot_365,
+  plot_368, plot_370, plot_371, plot_372, plot_374, plot_382, plot_383,
+  plot_384, plot_387, plot_388, plot_389, plot_393, plot_396, plot_400,
+  plot_402, plot_406, plot_411, plot_412, plot_414, plot_417, plot_420,
+  plot_421, plot_422, plot_423, plot_424, plot_425, plot_427, plot_429,
+  plot_430, plot_431, plot_434, plot_436, plot_437, plot_438, plot_440,
+  plot_444, plot_446, plot_447, plot_452, plot_456, plot_458, plot_459,
+  plot_461, plot_462, plot_463, plot_464, plot_466, plot_467, plot_468, 
+  plot_472, plot_475, plot_477, plot_478, plot_480, plot_484, plot_487
+)
+
+# Numero di colonne e righe per ciascuna pagina
+ncol_per_page <- 3
+nrow_per_page <- 2
+
+# Numero di grafici totali
+num_plots <- length(plots)
+
+# Numero di pagine necessarie
+num_pages <- ceiling(num_plots / (ncol_per_page * nrow_per_page))
+
+# Creare le pagine del PDF e aggiungere i grafici
+for (i in 1:num_pages) {
+  # Calcolare gli indici dei grafici per questa pagina
+  start_index <- (i - 1) * (ncol_per_page * nrow_per_page) + 1
+  end_index <- min(i * (ncol_per_page * nrow_per_page), num_plots)
+  
+  # Selezionare i grafici per questa pagina
+  page_plots <- plots[start_index:end_index]
+  
+  # Creare la griglia di grafici per questa pagina
+  combined_plots <- wrap_plots(page_plots, ncol = ncol_per_page, nrow = nrow_per_page)
+  
+  # Aggiungere la griglia alla pagina corrente del PDF
+  print(combined_plots)
 }
 
+# Chiudi il file PDF
 dev.off()
-
-
-###### cowplot #####
-
-
-pdf_file <- "tutti_i_plot.pdf"
-pdf(pdf_file, width = 8.5, height = 11)
-
-plot_list <- list()
-plot_names <- c("plot_263", "plot_264", "plot_269", "plot_270", "plot_285", "plot_288", "plot_289", 
-                "plot_296", "plot_297", "plot_298", "plot_299", "plot_304" ,"plot_307", "plot_310",
-                "plot_311", "plot_312", "plot_313", "plot_315", "plot_316" ,"plot_318", "plot_319",
-                "plot_323", "plot_327", "plot_330", "plot_332", "plot_346" ,"plot_348", "plot_349",
-                "plot_352", "plot_353", "plot_354", "plot_356", "plot_357" ,"plot_363", "plot_365",
-                "plot_368", "plot_370", "plot_371", "plot_372", "plot_374" ,"plot_382", "plot_383",
-                "plot_384", "plot_387", "plot_388", "plot_389", "plot_393" ,"plot_396", "plot_400",
-                "plot_402", "plot_406", "plot_411", "plot_412", "plot_414" ,"plot_417", "plot_420",
-                "plot_421", "plot_422", "plot_423", "plot_424", "plot_425" ,"plot_427", "plot_429",
-                "plot_430", "plot_431", "plot_434", "plot_436", "plot_437" ,"plot_438", "plot_440",
-                "plot_444", "plot_446", "plot_447", "plot_452", "plot_456" ,"plot_458", "plot_459",
-                "plot_461", "plot_462", "plot_463", "plot_464", "plot_465" ,"plot_466", "plot_467",
-                "plot_468", "plot_472", "plot_475", "plot_477", "plot_478" ,"plot_480", "plot_484","plot_487")
-
-for (nome in plot_names) {
-  plot_list[[nome]] <- get(nome)
-}
-
-nplot <- length(plot_names)
-plot_per_pagina <- 4
-numero_di_pagine <- ceiling(nplot / plot_per_pagina)
-
-for (pag in 1:numero_di_pagine) {
-  if (pag > 1) {
-    # Aggiungi una nuova pagina se non è la prima iterazione
-    dev.off()
-    pdf(pdf_file, width = 8.5, height = 11, onefile = TRUE)
-  }
-  
-  # Seleziona i plot da visualizzare nella pagina corrente
-  start_index <- (pag - 1) * plot_per_pagina + 1
-  end_index <- min(pag * plot_per_pagina, nplot)
-  
-  # Crea una lista di plot da visualizzare
-  plot_list_temp <- list()
-  for (index in start_index:end_index) {
-    plot_list_temp[[plot_names[index]]] <- plot_list[[plot_names[index]]]
-  }
-  
-  # Crea la griglia dei plot
-  plot_layout <- plot_grid(plotlist = unlist(plot_list_temp, use.names = FALSE), ncol = 2)
-  
-  # Stampa la griglia
-  print(plot_layout)
-  cat(paste("Pagina", pag, "di", numero_di_pagine, "\n"))
-}
-
-dev.off()
-
