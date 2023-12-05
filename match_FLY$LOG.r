@@ -3371,3 +3371,35 @@ for (i in 1:num_pages) {
 
 # Chiudi il file PDF
 dev.off()
+
+############### lm 393  ############### prova
+
+# Sposta la colonna 'osd_data:relativeHeight[meters]' di tre righe in avanti
+FLY393_REC_MOT_LD_1.2$BAR <- c(rep(NA, 3), FLY393_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`[1:(nrow(FLY393_REC_MOT_LD_1.2)-3)])
+
+# Rimuovi l'ultima riga aggiunta
+FLY393_REC_MOT_LD_1.2 <- FLY393_REC_MOT_LD_1.2[1:(nrow(FLY393_REC_MOT_LD_1.2)-1),]
+
+# Supponiamo che le tue colonne siano 'altezza_laser' e 'BAR'
+reg_393 <- lm(BAR ~ laser_altitude_m, data = FLY393_REC_MOT_LD_1.2)
+
+# Stampa un riepilogo del modello
+summary(reg_393)
+
+plot(FLY393_REC_MOT_LD_1.2$laser_altitude_m, FLY393_REC_MOT_LD_1.2$BAR, 
+     xlab = "Altezza Laser", ylab = "Altezza Barometrica",
+     main = "FLY_393", col = "blue")
+
+abline(reg_393, col = "darkorange")
+
+# Trova gli indici delle osservazioni senza valori mancanti in BAR e laser_altitude_m
+indici_senza_na393 <- which(!is.na(FLY393_REC_MOT_LD_1.2$BAR) & !is.na(FLY393_REC_MOT_LD_1.2$laser_altitude_m))
+
+# Calcola la differenza in altezza per tutte le osservazioni senza valori mancanti
+differenze_altezze393 <- FLY393_REC_MOT_LD_1.2$laser_altitude_m[indici_senza_na393] - FLY393_REC_MOT_LD_1.2$BAR[indici_senza_na393]
+
+# Calcola la media delle differenze in altezza
+media_differenze_altezze393 <- mean(differenze_altezze393)
+
+# Stampa la media delle differenze in altezza
+print(media_differenze_altezze393)
