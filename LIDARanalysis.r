@@ -26,6 +26,51 @@ apply_median_filter <- function(x, window_size) {
       if (non_na_count >= window_size) {
         result[i] <- median(x[start:end], na.rm = TRUE)
       }
+
+#### LIDAR FLITER FROM BAR ####
+lidar_filter3 <- function(lidar, baro, window_size, lower_limit, upper_limit) {
+  result <- lidar
+  for (i in 1:length(lidar)) {
+    # Omit borders
+    if (!is.na(lidar[i])) {
+      start <- max(1, i - window_size)
+      end <- min(length(lidar), i + window_size)
+      
+      # Calcola la differenza tra il valore Lidar e il valore corrispondente nel barometrico
+      differences <- lidar[start:end] - baro[start:end]
+      
+      # Applica la correzione SOLO se il valore Lidar è maggiore di 60 o minore di 2
+      if (lidar[i] > 60 || lidar[i] < 2) {
+        # Calcola la mediana della differenza escludendo gli outliers
+        valid_differences <- differences[differences >= lower_limit & differences <= upper_limit]
+        median_difference <- median(valid_differences)
+        result[i] <- baro[i] + median_difference
+      }
+    }
+  }
+  return(result)
+}
+
+# Esempio di utilizzo
+FLY299_REC_MOT_LD_1.2$laser_altitude_m_cleaned3 <- lidar_filter3(
+  FLY299_REC_MOT_LD_1.2$laser_altitude_m,
+  FLY299_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`,
+  window_size = 40,
+  lower_limit = 0,
+  upper_limit = 60
+)
+clean_299 <- ggplot(FLY299_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned3, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "Confronto tra Altezza Lidar originale, pulita e Barometrica",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top")
+clean_299
       # Altrimenti, lascia invariato il valore
     }
   }
