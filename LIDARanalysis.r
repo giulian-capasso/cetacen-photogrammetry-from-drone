@@ -92,3 +92,22 @@ confronto_md <- ggplot(FLY424_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
   theme(legend.position = "top")
 confronto_md
 
+# funzione per quando si vuole riempire il lidar con i dati precedeti e successivi una volta eliminati gli outliers. 
+# solitamente da fare dopo lidar_filter function
+Fill_mediana <- function(colonna) {
+  indici_na <- which(is.na(colonna))
+  for (i in indici_na) {
+    indici_prepost <- seq(i - 5, i + 5)
+    
+    # Rimuovi gli indici che sono fuori dai limiti della colonna
+    indici_prepost <- indici_prepost[indici_prepost > 0 & indici_prepost <= length(colonna)]
+    
+    # Se ci sono abbastanza valori non NA, sostituisci il NA con la mediana
+    if (length(na.omit(colonna[indici_prepost])) >= 5) {
+      colonna[i] <- median(colonna[indici_prepost], na.rm = TRUE)
+    }
+  }
+  
+  return(colonna)
+}
+
