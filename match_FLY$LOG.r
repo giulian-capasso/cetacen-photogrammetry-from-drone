@@ -3324,80 +3324,53 @@ plot_487
 
 ########### PDF #############
 
-pdf("combined_plots3.pdf", width = 16, height = 8.5)
+setwd("~/Desktop")
+pdf_file <- "tutti_i_plot3.pdf"
+pdf(pdf_file, width = 11, height = 8.5)
 
-# Lista dei tuoi grafici
+ 
+# Lista dei nomi dei plot
 plot_names <- c("plot_263", "plot_264", "plot_269", "plot_270", "plot_285", "plot_288", "plot_289", 
-                "plot_296", "plot_297", "plot_298", "plot_299", "plot_304" ,"plot_307", "plot_310",
-                "plot_311", "plot_312", "plot_313", "plot_315", "plot_316" ,"plot_318", "plot_319",
-                "plot_323", "plot_327", "plot_330", "plot_332", "plot_346" ,"plot_348", "plot_349",
-                "plot_352", "plot_353", "plot_354", "plot_356", "plot_357" ,"plot_363", "plot_365",
-                "plot_368", "plot_370", "plot_371", "plot_372", "plot_374" ,"plot_382", "plot_383",
-                "plot_384", "plot_387", "plot_388", "plot_389", "plot_393" ,"plot_396", "plot_400",
-                "plot_402", "plot_406", "plot_411", "plot_412", "plot_414" ,"plot_417", "plot_420",
-                "plot_421", "plot_422", "plot_423", "plot_424", "plot_425" ,"plot_427", "plot_429",
-                "plot_430", "plot_431", "plot_434", "plot_436", "plot_437" ,"plot_438", "plot_440",
-                "plot_444", "plot_446", "plot_447", "plot_452", "plot_456" ,"plot_458", "plot_459",
-                "plot_461", "plot_462", "plot_463", "plot_464", "plot_466", "plot_467", "plot_468", 
-                "plot_472", "plot_475", "plot_477", "plot_478" ,"plot_480", "plot_484","plot_487")
+                 "plot_296", "plot_297", "plot_298", "plot_299", "plot_304", "plot_306", "plot_307", 
+                 "plot_310", "plot_311", "plot_312", "plot_313", "plot_315", "plot_316", "plot_317",
+                 "plot_318", "plot_319", "plot_323", "plot_327", "plot_330", "plot_332", "plot_346",
+                 "plot_348", "plot_349", "plot_352", "plot_353", "plot_354", "plot_356", "plot_357",
+                 "plot_363", "plot_365", "plot_368", "plot_370", "plot_371", "plot_372", "plot_374",
+                 "plot_382", "plot_383", "plot_384", "plot_387", "plot_388", "plot_389", "plot_393", 
+                 "plot_396", "plot_400", "plot_401", "plot_402", "plot_406", "plot_411", "plot_412", 
+                 "plot_414", "plot_417", "plot_420", "plot_421", "plot_422", "plot_423", "plot_424", 
+                 "plot_425", "plot_427", "plot_429", "plot_430", "plot_431", "plot_434", "plot_436", 
+                 "plot_437", "plot_438", "plot_440", "plot_444", "plot_446", "plot_447", "plot_452", 
+                 "plot_456", "plot_457", "plot_458", "plot_459", "plot_461", "plot_462", "plot_463", 
+                 "plot_464", "plot_466", "plot_467", "plot_468", "plot_472", "plot_475", "plot_477", 
+                 "plot_478", "plot_480", "plot_484", "plot_487")
 
-# Numero di colonne e righe per ciascuna pagina
+# Crea un elenco di plot
+plot_list <- lapply(plot_names, function(name) get(name))
+ 
+# Numero di colonne e righe per pagina
 ncol_per_page <- 3
 nrow_per_page <- 2
-
-# Numero di grafici totali
-num_plots <- length(plots)
-
-# Numero di pagine necessarie
-num_pages <- ceiling(num_plots / (ncol_per_page * nrow_per_page))
-
-# Creare le pagine del PDF e aggiungere i grafici
-for (i in 1:num_pages) {
-  # Calcolare gli indici dei grafici per questa pagina
-  start_index <- (i - 1) * (ncol_per_page * nrow_per_page) + 1
-  end_index <- min(i * (ncol_per_page * nrow_per_page), num_plots)
-  
-  # Selezionare i grafici per questa pagina
-  page_plots <- plots[start_index:end_index]
-  
-  # Creare la griglia di grafici per questa pagina
-  combined_plots <- wrap_plots(page_plots, ncol = ncol_per_page, nrow = nrow_per_page)
-  
-  # Aggiungere la griglia alla pagina corrente del PDF
-  print(combined_plots)
-}
-
-# Chiudi il file PDF
+ 
+# Calcola il numero totale di pagine
+num_pages <- ceiling(length(plot_list) / (ncol_per_page * nrow_per_page))
+ 
+# Imposta le dimensioni del PDF
+pdf("tutti_i_plot3.pdf", width = 16, height = 9)
+ 
+# Ciclo per creare le pagine del PDF
+ for (page in 1:num_pages) {
+   # Calcola gli indici di inizio e fine per questa pagina
+   start_index <- (page - 1) * (ncol_per_page * nrow_per_page) + 1
+   end_index <- min(page * (ncol_per_page * nrow_per_page), length(plot_list))
+   
+   # Seleziona i plot per questa pagina
+   page_plots <- plot_list[start_index:end_index]
+   
+   # Organizza i plot su una griglia e stampa la pagina
+   grid.arrange(grobs = page_plots, ncol = ncol_per_page, nrow = nrow_per_page)
+ }
+ 
+# Chiudi il PDF
 dev.off()
-
-############### lm 393  ############### prova
-
-# Sposta la colonna 'osd_data:relativeHeight[meters]' di tre righe in avanti
-FLY393_REC_MOT_LD_1.2$BAR <- c(rep(NA, 3), FLY393_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`[1:(nrow(FLY393_REC_MOT_LD_1.2)-3)])
-
-# Rimuovi l'ultima riga aggiunta
-FLY393_REC_MOT_LD_1.2 <- FLY393_REC_MOT_LD_1.2[1:(nrow(FLY393_REC_MOT_LD_1.2)-1),]
-
-# Supponiamo che le tue colonne siano 'altezza_laser' e 'BAR'
-reg_393 <- lm(BAR ~ laser_altitude_m, data = FLY393_REC_MOT_LD_1.2)
-
-# Stampa un riepilogo del modello
-summary(reg_393)
-
-plot(FLY393_REC_MOT_LD_1.2$laser_altitude_m, FLY393_REC_MOT_LD_1.2$BAR, 
-     xlab = "Altezza Laser", ylab = "Altezza Barometrica",
-     main = "FLY_393", col = "blue")
-
-abline(reg_393, col = "darkorange")
-
-# Trova gli indici delle osservazioni senza valori mancanti in BAR e laser_altitude_m
-indici_senza_na393 <- which(!is.na(FLY393_REC_MOT_LD_1.2$BAR) & !is.na(FLY393_REC_MOT_LD_1.2$laser_altitude_m))
-
-# Calcola la differenza in altezza per tutte le osservazioni senza valori mancanti
-differenze_altezze393 <- FLY393_REC_MOT_LD_1.2$laser_altitude_m[indici_senza_na393] - FLY393_REC_MOT_LD_1.2$BAR[indici_senza_na393]
-
-# Calcola la media delle differenze in altezza
-media_differenze_altezze393 <- mean(differenze_altezze393)
-
-# Stampa la media delle differenze in altezza
-print(media_differenze_altezze393)
+ 
