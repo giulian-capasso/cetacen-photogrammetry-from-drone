@@ -3328,19 +3328,18 @@ pdf("combined_plots3.pdf", width = 16, height = 8.5)
 
 # Lista dei tuoi grafici
 plot_names <- c("plot_263", "plot_264", "plot_269", "plot_270", "plot_285", "plot_288", "plot_289", 
-                "plot_296", "plot_297", "plot_298", "plot_299", "plot_304" ,"plot_306", "plot_307", 
-                "plot_310", "plot_311", "plot_312", "plot_313", "plot_315", "plot_316" ,"plot_317",
-                "plot_318", "plot_319", "plot_323", "plot_327", "plot_330", "plot_332", "plot_346",
-                "plot_348", "plot_349", "plot_352", "plot_353", "plot_354", "plot_356", "plot_357",
-                "plot_363", "plot_365", "plot_368", "plot_370", "plot_371", "plot_372", "plot_374",
-                "plot_382", "plot_383", "plot_384", "plot_387", "plot_388", "plot_389", "plot_393", 
-                "plot_396", "plot_400", "plot_401", "plot_402", "plot_406", "plot_411", "plot_412", 
-                "plot_414", "plot_417", "plot_420", "plot_421", "plot_422", "plot_423", "plot_424", 
-                "plot_425", "plot_427", "plot_429", "plot_430", "plot_431", "plot_434", "plot_436", 
-                "plot_437" ,"plot_438", "plot_440", "plot_444", "plot_446", "plot_447", "plot_452", 
-                "plot_456" ,"plot_457", "plot_458", "plot_459", "plot_461", "plot_462", "plot_463", 
-                "plot_464", "plot_465" ,"plot_466", "plot_467", "plot_468", "plot_472", "plot_475", 
-                "plot_477", "plot_478" ,"plot_480", "plot_484","plot_487")
+                "plot_296", "plot_297", "plot_298", "plot_299", "plot_304" ,"plot_307", "plot_310",
+                "plot_311", "plot_312", "plot_313", "plot_315", "plot_316" ,"plot_318", "plot_319",
+                "plot_323", "plot_327", "plot_330", "plot_332", "plot_346" ,"plot_348", "plot_349",
+                "plot_352", "plot_353", "plot_354", "plot_356", "plot_357" ,"plot_363", "plot_365",
+                "plot_368", "plot_370", "plot_371", "plot_372", "plot_374" ,"plot_382", "plot_383",
+                "plot_384", "plot_387", "plot_388", "plot_389", "plot_393" ,"plot_396", "plot_400",
+                "plot_402", "plot_406", "plot_411", "plot_412", "plot_414" ,"plot_417", "plot_420",
+                "plot_421", "plot_422", "plot_423", "plot_424", "plot_425" ,"plot_427", "plot_429",
+                "plot_430", "plot_431", "plot_434", "plot_436", "plot_437" ,"plot_438", "plot_440",
+                "plot_444", "plot_446", "plot_447", "plot_452", "plot_456" ,"plot_458", "plot_459",
+                "plot_461", "plot_462", "plot_463", "plot_464", "plot_466", "plot_467", "plot_468", 
+                "plot_472", "plot_475", "plot_477", "plot_478" ,"plot_480", "plot_484","plot_487")
 
 # Numero di colonne e righe per ciascuna pagina
 ncol_per_page <- 3
