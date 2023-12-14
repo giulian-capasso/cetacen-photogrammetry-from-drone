@@ -9,6 +9,20 @@ plot_tilt_424 <- ggplot(FLY424_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeSta
 plot_tilt_424 + scale_y_continuous(
   sec.axis = sec_axis(~./5, name = "Variable 2", breaks = seq(-5, 5, 1)))
 
+# plot Lidar & tilt 
+LD_TILT_285 <- ggplot(FLY285_REC_MOT_LD_1.2) +
+  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "Height"), size = 0.7, linetype = "solid") +
+  geom_line(aes(x = GPS.dateTimeStamp, y = tilt_deg, color = "Tilt"), size = 0.7, linetype = "solid") +
+  labs(title = "2021-04-22 17:10:01 (FLY_285) Lidar Tilt", x = "Time", y = "Height (m)") +
+  theme_minimal() +
+  theme(legend.position = c(0.9, 0.9),
+        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
+        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
+        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
+  scale_colour_manual(name = NULL, values = c("Height" = "darkorange", "Tilt" = "darkgray")) +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+LD_TILT_285
+
 #### Pulizia outliers con mediana #####
 # Pulizia Outliers
 apply_median_filter <- function(x, window_size) {
