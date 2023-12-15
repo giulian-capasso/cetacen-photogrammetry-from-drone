@@ -95,3 +95,32 @@ FLY423_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter_with_omission(
   omit_last_n = 0
 )
 
+############ GAP Function #############
+GAP <- function(data, col1, col2, start_index, end_index) {
+  # Estrai le colonne di interesse nel range specificato
+  subset_data <- data.frame(
+    col1 = data[[col1]][start_index:end_index],
+    col2 = data[[col2]][start_index:end_index]
+  )
+  
+  # Calcola la differenza riga per riga
+  differences <- subset_data$col1 - subset_data$col2
+  
+  # Rimuovi le differenze con NA
+  valid_differences <- differences[!is.na(differences)]
+  
+  # Calcola media, moda, mediana delle differenze
+  mean_diff <- mean(valid_differences, na.rm = TRUE)
+  mode_diff <- as.numeric(names(table(valid_differences))[which.max(table(valid_differences))])
+  median_diff <- median(valid_differences, na.rm = TRUE)
+  
+  # Restituisci i risultati
+  return(list(mean_diff = mean_diff, mode_diff = mode_diff, median_diff = median_diff))
+}
+# Esempio di utilizzo della funzione
+GAP_297 <- GAP(FLY297_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 287, 300)
+
+# Stampare i risultati con cat
+cat("Media delle differenze:", GAP_297$mean_diff, "\n")
+cat("Moda delle differenze:", GAP_297$mode_diff, "\n")
+cat("Mediana delle differenze:", GAP_297$median_diff, "\n")
