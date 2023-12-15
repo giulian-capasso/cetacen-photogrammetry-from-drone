@@ -65,3 +65,33 @@ FLY421_REC_MOT_LD_1.2$laser_altitude_m_cleaned3 <- fill_wB(
   omit_first_n = 10,
   omit_last_n = 5
 )
+
+# Lidar filter senza baro
+# Definisci la funzione lidar_filter_with_omission
+lidar_filter_with_omission <- function(x, window_size, lower_limit, upper_limit, omit_first_n = 0, omit_last_n = 0) {
+  result <- x
+  for (i in 1:length(x)) {
+    # Omit borders, including the first and last n values
+    if (!is.na(x[i]) && i > omit_first_n && i <= (length(x) - omit_last_n)) {
+      start <- max(1, i - window_size)
+      end <- min(length(x), i + window_size)
+
+      # Applica la correzione SOLO se il valore Lidar è maggiore di 60 o minore di 2
+      if (x[i] > 60 || x[i] < 2) {
+        result[i] <- NA
+      }
+    }
+  }
+  return(result)
+}
+
+# Ora puoi utilizzare lidar_filter_with_omission nel tuo caso specifico
+FLY423_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter_with_omission(
+  FLY423_REC_MOT_LD_1.2$laser_altitude_m,
+  window_size = 1,
+  lower_limit = 0,
+  upper_limit = 80,
+  omit_first_n = 0,
+  omit_last_n = 0
+)
+
