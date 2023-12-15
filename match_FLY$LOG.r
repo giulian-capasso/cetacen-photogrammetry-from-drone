@@ -3323,7 +3323,6 @@ plot_487 <- ggplot(FLY487_REC_MOT_LD_1.2) +
 plot_487
 
 ########### PDF #############
-
 setwd("~/Desktop")
 pdf_file <- "tutti_i_plot3.pdf"
 pdf(pdf_file, width = 11, height = 8.5)
@@ -3373,4 +3372,3 @@ pdf("tutti_i_plot3.pdf", width = 16, height = 9)
  
 # Chiudi il PDF
 dev.off()
- 
