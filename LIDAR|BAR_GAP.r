@@ -479,3 +479,61 @@ FLY487_REC_MOT_LD_1.2$laser_altitude_m_cleaned
 clean_487
 GAP_487 <- GAP(FLY487_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 135, 400)
 GAP_487
+
+
+#### ------------------------------------------------ Stats ------------------------------------------------ ####
+
+overall_stats <- function(gap_list) {
+  # Estrai le differenze, medie, mode, mediane e deviazioni standard
+  mean_diffs <- sapply(gap_list, function(gap) gap$mean_diff)
+  mode_diffs <- sapply(gap_list, function(gap) gap$mode_diff)
+  median_diffs <- sapply(gap_list, function(gap) gap$median_diff)
+  
+  # Filtra i valori non validi
+  valid_mean_diffs <- mean_diffs[!is.na(mean_diffs)]
+  valid_mode_diffs <- mode_diffs[!is.na(mode_diffs)]
+  valid_median_diffs <- median_diffs[!is.na(median_diffs)]
+  
+  # Calcola le deviazioni standard solo se ci sono valori validi
+  overall_sd_mean_diff <- if (length(valid_mean_diffs) > 0) sd(valid_mean_diffs) else NA
+  overall_sd_mode_diff <- if (length(valid_mode_diffs) > 0) sd(valid_mode_diffs) else NA
+  overall_sd_median_diff <- if (length(valid_median_diffs) > 0) sd(valid_median_diffs) else NA
+  
+  # Calcola le medie solo se ci sono valori validi
+  overall_mean_mean_diff <- if (length(valid_mean_diffs) > 0) mean(valid_mean_diffs) else NA
+  overall_mean_mode_diff <- if (length(valid_mode_diffs) > 0) mean(valid_mode_diffs) else NA
+  overall_mean_median_diff <- if (length(valid_median_diffs) > 0) mean(valid_median_diffs) else NA
+  
+  # Calcola il minimo e il massimo
+  min_mean_diff <- if (length(valid_mean_diffs) > 0) min(valid_mean_diffs) else NA
+  max_mean_diff <- if (length(valid_mean_diffs) > 0) max(valid_mean_diffs) else NA
+  
+  min_median_diff <- if (length(valid_median_diffs) > 0) min(valid_median_diffs) else NA
+  max_median_diff <- if (length(valid_median_diffs) > 0) max(valid_median_diffs) else NA
+  
+  # Restituisci i risultati
+  return(list(
+    overall_sd_mean_diff = overall_sd_mean_diff,
+    overall_sd_mode_diff = overall_sd_mode_diff,
+    overall_sd_median_diff = overall_sd_median_diff,
+    overall_mean_mean_diff = overall_mean_mean_diff,
+    overall_mean_mode_diff = overall_mean_mode_diff,
+    overall_mean_median_diff = overall_mean_median_diff,
+    min_mean_diff = min_mean_diff,
+    max_mean_diff = max_mean_diff,
+    min_median_diff = min_median_diff,
+    max_median_diff = max_median_diff
+  ))
+}
+
+# Esempio di utilizzo:
+gap_list <- list(GAP_298, GAP_299, GAP_304, GAP_306, GAP_307, GAP_310, GAP_311, GAP_312, GAP_313, GAP_315,
+                 GAP_316, GAP_317, GAP_318, GAP_319, GAP_323, GAP_327, GAP_330, GAP_352, GAP_353, GAP_354,
+                 GAP_365, GAP_368, GAP_371, GAP_372, GAP_374, GAP_382, GAP_383, GAP_384, GAP_387, GAP_388,
+                 GAP_389, GAP_393, GAP_396, GAP_400, GAP_401, GAP_402, GAP_411, GAP_412, GAP_414, GAP_417,
+                 GAP_420, GAP_421, GAP_423, GAP_424, GAP_425, GAP_427, GAP_429, GAP_430, GAP_431, GAP_434,
+                 GAP_436, GAP_437, GAP_438, GAP_440, GAP_444, GAP_446, GAP_447, GAP_452, GAP_456, GAP_457,
+                 GAP_458, GAP_459, GAP_461, GAP_462, GAP_463, GAP_464, GAP_466, GAP_472, GAP_475, GAP_477,
+                 GAP_478, GAP_484, GAP_487)
+
+overall_stats(gap_list)
