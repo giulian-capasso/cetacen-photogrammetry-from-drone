@@ -152,10 +152,330 @@ clean_352
 GAP_352 <- GAP(FLY352_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 390, 525)
 GAP_352
 
-# FLY 353 + LOG0069
-FLY353_REC_MOT_LD_1.2$laser_altitude_m_cleaned
-clean_353
-GAP_353 <- GAP(FLY353_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 80, 400)
-GAP_353
+# FLY 354 + LOG0070
+FLY354_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_354
+GAP_354 <- GAP(FLY354_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 55, 470)
+GAP_354
 
+# FLY 365 + LOG0071
+FLY365_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_365
+GAP_365 <- GAP(FLY365_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 100, 690)
+GAP_365
 
+# FLY 368 + LOG0064
+FLY368_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned
+clean_368
+GAP_368 <- GAP(FLY368_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 53, 600)
+GAP_368
+
+# FLY 371 + LOG0075
+FLY371_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_371
+GAP_371 <- GAP(FLY371_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 170, 300)
+GAP_371
+
+# FLY 372 + LOG0076 #da capire com'è andato questo volo, 8 metri di differenza
+FLY372_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_372
+GAP_372 <- GAP(FLY372_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 50, 140)
+GAP_372
+
+# FLY 374 + LOG0078
+FLY374_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_374
+GAP_374 <- GAP(FLY374_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 918, 990)
+GAP_374
+
+# FLY 382 + LOG0079
+FLY382_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_382
+GAP_382 <- GAP(FLY382_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 300, 430)
+GAP_382
+
+# FLY 383 + LOG0080
+FLY383_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_382
+GAP_383 <- GAP(FLY383_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 100, 530)
+GAP_383
+
+# FLY 384 + LOG0081
+FLY384_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_384
+GAP_384 <- GAP(FLY384_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 180, 680)
+GAP_384
+
+# FLY 387 + LOG0084
+FLY387_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_387
+GAP_387 <- GAP(FLY387_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 190, 240)
+GAP_387
+
+# FLY 388 + LOG0085 #da capire com'è andato questo volo, 8 metri di differenza
+FLY388_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_388
+GAP_388 <- GAP(FLY388_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 33, 57)
+GAP_388
+
+# FLY 389 + LOG0086 #da capire com'è andato questo volo, 2.7 metri di differenza
+FLY389_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned
+clean_389
+GAP_389 <- GAP(FLY389_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 733, 800)
+GAP_389
+
+# FLY 393 + LOG0088 # volo a terra
+FLY393_REC_MOT_LD_1.2$laser_altitude_m
+plot_393
+GAP_393 <- GAP(FLY393_REC_MOT_LD_1.2, "laser_altitude_m", "osd_data:relativeHeight[meters]", 20, 220)
+GAP_393
+
+FLY393_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0, 0, 0, head(FLY393_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+#Spostare il drone di 3 in avanti per far matchare !!!! (?) da capire meglio
+
+# FLY 396 + LOG0090
+FLY396_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned
+clean_396
+GAP_396 <- GAP(FLY396_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 375, 600)
+GAP_396
+
+# FLY 400 + LOG0093
+FLY400_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_400
+GAP_400 <- GAP(FLY400_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 200, 310)
+GAP_400
+
+# FLY 401 + LOG0094
+FLY401_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_401
+GAP_401 <- GAP(FLY401_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 560, 580)
+GAP_401
+
+# FLY 402 + LOG0095
+FLY402_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_402
+GAP_402 <- GAP(FLY402_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 80, 200)
+GAP_402
+
+# FLY 411 + LOG0099
+FLY411_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_411
+GAP_411 <- GAP(FLY411_REC_MOT_LD_1.2, "laser_altitude_m", "osd_data:relativeHeight[meters]", 35, 310)
+GAP_411
+
+# FLY 412 + LOG0100
+FLY414_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_414
+GAP_414 <- GAP(FLY414_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 200, 375)
+GAP_414
+
+# FLY 414 + LOG0103
+FLY414_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_414
+GAP_414 <- GAP(FLY414_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 200, 375)
+GAP_414
+
+# FLY 417 + LOG0106
+FLY417_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_417
+GAP_417 <- GAP(FLY417_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 220, 790)
+GAP_417
+
+# FLY 420 + LOG0108
+FLY420_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned2
+clean_420
+GAP_420 <- GAP(FLY420_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 70, 480)
+GAP_420
+
+# FLY 421 + LOG0109
+FLY421_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_421
+GAP_421 <- GAP(FLY421_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 70, 270)
+GAP_421
+
+# FLY 423 + LOG0112
+FLY423_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_423
+GAP_423 <- GAP(FLY423_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 50, 140)
+GAP_423
+
+# FLY 424 + LOG0113
+FLY424_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_424
+GAP_424 <- GAP(FLY424_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 140, 240)
+GAP_424
+
+# FLY 425 + LOG0115
+FLY425_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_425
+GAP_425 <- GAP(FLY425_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 90, 450)
+GAP_425
+
+# FLY 427 + LOG0117
+FLY427_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_427
+GAP_427 <- GAP(FLY427_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 400, 650)
+GAP_427
+
+# FLY 427 + LOG0117
+FLY429_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_429
+GAP_429 <- GAP(FLY429_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 60, 155)
+GAP_429
+
+# FLY 430 + LOG0125
+FLY430_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned
+clean_430
+GAP_430 <- GAP(FLY430_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 290, 490)
+GAP_430
+
+# FLY 431 + LOG0127
+FLY431_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_431
+GAP_431 <- GAP(FLY431_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 315, 550)
+GAP_431
+
+# FLY 434 + LOG0129
+FLY434_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_434
+GAP_434 <- GAP(FLY434_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 180, 650)
+GAP_434
+
+# FLY 436 + LOG0131
+FLY436_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_436
+GAP_436 <- GAP(FLY436_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 60, 310)
+GAP_436
+
+# FLY 437 + LOG0132
+FLY437_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_437
+GAP_437 <- GAP(FLY437_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 130, 350)
+GAP_437
+
+# FLY 438 + LOG0133
+FLY438_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_438
+GAP_438 <- GAP(FLY438_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 100, 310)
+GAP_438
+
+# FLY 440 + LOG0134
+FLY440_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_440
+GAP_440 <- GAP(FLY440_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 250, 850)
+GAP_440
+
+# FLY 444 + LOG0138
+FLY444_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_444
+GAP_444 <- GAP(FLY444_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 70, 515)
+GAP_444
+
+# FLY 446 + LOG0139
+FLY446_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_446
+GAP_446 <- GAP(FLY446_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 90, 240)
+GAP_446
+
+# FLY 447 + LOG0140
+FLY447_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_447
+GAP_447 <- GAP(FLY447_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 120, 250)
+GAP_447
+
+# FLY 452 + LOG0144
+FLY452_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_452
+GAP_452 <- GAP(FLY452_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 1, 315)
+GAP_452
+
+# FLY 456 + LOG0148
+FLY456_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_456
+GAP_456 <- GAP(FLY456_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 51, 200)
+GAP_456
+
+# FLY 457 + LOG0149
+FLY457_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_457
+GAP_457 <- GAP(FLY457_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 70, 140)
+GAP_457
+
+# FLY 458 + LOG0150
+FLY458_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_458
+GAP_458 <- GAP(FLY458_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 630, 750)
+GAP_458
+
+# FLY 459 + LOG0151
+FLY459_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_459
+GAP_459 <- GAP(FLY459_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 100, 460)
+GAP_459
+
+# FLY 461 + LOG0152
+FLY461_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_461
+GAP_461 <- GAP(FLY461_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 50, 400)
+GAP_461
+
+# FLY 462 + LOG0153 # 8 m di distanza capire com'è andato il volo
+FLY462_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_462
+GAP_462 <- GAP(FLY462_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 18, 188)
+GAP_462
+
+# FLY 463 + LOG0154
+FLY463_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_463
+GAP_463 <- GAP(FLY463_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 200, 600)
+GAP_463
+
+# FLY 464 + LOG0155
+FLY464_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_464
+GAP_464 <- GAP(FLY464_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 120, 545)
+GAP_464
+
+# FLY 466 + LOG0157
+FLY466_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned
+clean_466
+GAP_466 <- GAP(FLY466_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 62, 78)
+GAP_466
+
+# FLY 472 + LOG0161
+FLY472_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_472
+GAP_472 <- GAP(FLY472_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 460, 920)
+GAP_472
+
+# FLY 475 + LOG0164
+FLY475_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_475
+GAP_475 <- GAP(FLY475_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 220, 350)
+GAP_475
+
+# FLY 477 + LOG0166
+FLY477_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_477
+GAP_477 <- GAP(FLY477_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 275, 450)
+GAP_477
+
+# FLY 478 + LOG0167
+FLY478_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_478
+GAP_478 <- GAP(FLY478_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 170, 370)
+GAP_478
+
+# FLY 484 + LOG0168
+FLY484_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_484
+GAP_484 <- GAP(FLY484_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 50, 420)
+GAP_484
+
+# FLY 487 + LOG0170
+FLY487_REC_MOT_LD_1.2$laser_altitude_m_cleaned
+clean_487
+GAP_487 <- GAP(FLY487_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", 135, 400)
+GAP_487
