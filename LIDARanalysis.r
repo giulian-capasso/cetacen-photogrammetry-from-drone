@@ -5,7 +5,7 @@ library(patchwork)
 library(hms)
 library(stringr)
 
-#### LIDAR CLEANING #### + lidar tilt analysis
+#### LIDAR CLEANING ####
 
 # process 
 
@@ -234,7 +234,7 @@ FLY297_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 150,
+  omit_first_n = 278,
   omit_last_n = 50
 )
 clean_297 <- ggplot(FLY297_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -272,6 +272,8 @@ FLY298_REC_MOT_LD <- left_join(FLY298_REC_MOT_ready, LOG_0028_R, by = "GPS.dateT
 FLY298_REC_MOT_LD_1 <- FLY298_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
 # Rename to meters
 FLY298_REC_MOT_LD_1.2 <- FLY298_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY298_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0, head(FLY298_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -2))
 # Plot 
 plot_298 <- ggplot(FLY298_REC_MOT_LD_1.2) +
   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
@@ -293,7 +295,7 @@ FLY298_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 50,
+  omit_first_n = 77,
   omit_last_n = 10
 )
 clean_298 <- ggplot(FLY298_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -331,6 +333,7 @@ FLY299_REC_MOT_LD <- left_join(FLY299_REC_MOT_ready, LOG_0029_R, by = "GPS.dateT
 FLY299_REC_MOT_LD_1 <- FLY299_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
 # Rename to meters
 FLY299_REC_MOT_LD_1.2 <- FLY299_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
 # Plot 
 plot_299 <- ggplot(FLY299_REC_MOT_LD_1.2) +
   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
@@ -352,7 +355,7 @@ FLY299_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 20,
+  omit_first_n = 44,
   omit_last_n = 10
 )
 clean_299 <- ggplot(FLY299_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -411,7 +414,7 @@ FLY304_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 20,
+  omit_first_n = 204,
   omit_last_n = 10
 )
 clean_304 <- ggplot(FLY304_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -448,6 +451,9 @@ FLY306_REC_MOT_LD <- left_join(FLY306_REC_MOT_ready, LOG_0031_R, by = "GPS.dateT
 FLY306_REC_MOT_LD_1 <- FLY306_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
 # Rename to meters
 FLY306_REC_MOT_LD_1.2 <- FLY306_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY306_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY306_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
 # Plot 
 plot_306 <- ggplot(FLY306_REC_MOT_LD_1.2) +
   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m_cleaned3, color = "LIDAR"), size = 0.7, linetype = "solid") +
@@ -469,7 +475,7 @@ FLY306_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 20,
+  omit_first_n = 50,
   omit_last_n = 10
 )
 clean_306 <- ggplot(FLY306_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -586,8 +592,8 @@ FLY310_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 3,
-  omit_last_n = 10
+  omit_first_n = 22,
+  omit_last_n = 30
 )
 clean_310 <- ggplot(FLY310_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
   geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
@@ -645,7 +651,7 @@ FLY311_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 3,
+  omit_first_n = 30,
   omit_last_n = 10
 )
 clean_311 <- ggplot(FLY311_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -683,6 +689,9 @@ FLY312_REC_MOT_LD <- left_join(FLY312_REC_MOT_ready, LOG_0036_R, by = "GPS.dateT
 FLY312_REC_MOT_LD_1 <- FLY312_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
 # Rename to meters
 FLY312_REC_MOT_LD_1.2 <- FLY312_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY312_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY312_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
 # Plot 
 plot_312 <- ggplot(FLY312_REC_MOT_LD_1.2) +
   geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "LIDAR"), size = 0.7, linetype = "solid") +
@@ -763,7 +772,7 @@ FLY313_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 55,
   omit_last_n = 5
 )
 clean_313 <- ggplot(FLY313_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -822,7 +831,7 @@ FLY315_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 38,
   omit_last_n = 5
 )
 clean_315 <- ggplot(FLY315_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -881,7 +890,7 @@ FLY316_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 20,
   omit_last_n = 5
 )
 clean_316 <- ggplot(FLY316_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -999,7 +1008,7 @@ FLY318_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 10,
   omit_last_n = 5
 )
 clean_318 <- ggplot(FLY318_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1058,7 +1067,7 @@ FLY319_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 124,
   omit_last_n = 5
 )
 clean_319 <- ggplot(FLY319_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1117,7 +1126,7 @@ FLY323_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 280,
   omit_last_n = 5
 )
 clean_323 <- ggplot(FLY323_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1176,7 +1185,7 @@ FLY327_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 35,
   omit_last_n = 10
 )
 clean_327 <- ggplot(FLY327_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1235,7 +1244,7 @@ FLY330_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 25,
   omit_last_n = 10
 )
 clean_330 <- ggplot(FLY330_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1294,7 +1303,7 @@ FLY332_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 130,
   omit_last_n = 10
 )
 clean_332 <- ggplot(FLY332_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1353,7 +1362,7 @@ FLY352_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 298,
   omit_last_n = 10
 )
 clean_352 <- ggplot(FLY352_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1412,7 +1421,7 @@ FLY353_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 50,
   omit_last_n = 10
 )
 clean_353 <- ggplot(FLY353_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1471,7 +1480,7 @@ FLY354_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 30,
   omit_last_n = 10
 )
 clean_354 <- ggplot(FLY354_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1527,11 +1536,11 @@ plot_365
 FLY365_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   FLY365_REC_MOT_LD_1.2$laser_altitude_m,
   FLY365_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`,
-  window_size = 10,
+  window_size = 5,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
-  omit_last_n = 10
+  omit_first_n = 50,
+  omit_last_n = 20
 )
 clean_365 <- ggplot(FLY365_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
   geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
@@ -1591,7 +1600,7 @@ FLY368_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 40,
   omit_last_n = 10
 )
 clean_368 <- ggplot(FLY368_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
@@ -1650,7 +1659,7 @@ FLY371_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 10,
+  omit_first_n = 130,
   omit_last_n = 10
 )
 clean_371 <- ggplot(FLY371_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1801,7 +1810,7 @@ FLY374_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 874,
   omit_last_n = 10
 )
 clean_374 <- ggplot(FLY374_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1860,7 +1869,7 @@ FLY382_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 286,
   omit_last_n = 10
 )
 clean_382 <- ggplot(FLY382_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1919,7 +1928,7 @@ FLY383_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 75,
   omit_last_n = 10
 )
 clean_383 <- ggplot(FLY383_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -1978,7 +1987,7 @@ FLY384_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 165,
   omit_last_n = 10
 )
 
@@ -2038,7 +2047,7 @@ FLY387_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 150,
   omit_last_n = 10
 )
 clean_387 <- ggplot(FLY387_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -2158,7 +2167,7 @@ FLY389_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 416,
   omit_last_n = 10
 )
 clean_389 <- ggplot(FLY389_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
@@ -2257,7 +2266,7 @@ FLY396_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 330,
   omit_last_n = 10
 )
 clean_396 <- ggplot(FLY396_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
@@ -2316,7 +2325,7 @@ FLY400_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 168,
   omit_last_n = 10
 )
 clean_400 <- ggplot(FLY400_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -2375,7 +2384,7 @@ FLY401_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 428,
   omit_last_n = 10
 )
 clean_401 <- ggplot(FLY401_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -2434,7 +2443,7 @@ FLY402_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 40,
   omit_last_n = 10
 )
 clean_402 <- ggplot(FLY402_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -2551,7 +2560,7 @@ FLY412_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 40,
   omit_last_n = 10
 )
 clean_412 <- ggplot(FLY412_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
@@ -2610,7 +2619,7 @@ FLY414_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 145,
   omit_last_n = 10
 )
 clean_414 <- ggplot(FLY414_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -2669,7 +2678,7 @@ FLY417_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 30,
   upper_limit = 60,
-  omit_first_n = 0,
+  omit_first_n = 188,
   omit_last_n = 10
 )
 clean_417 <- ggplot(FLY417_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
@@ -2730,7 +2739,7 @@ FLY420_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 1,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 30,
   omit_last_n = 10
 )
 FLY420_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned2 <- lidar_filter3(
@@ -2755,7 +2764,7 @@ clean_420 <- ggplot(FLY420_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
   theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
 clean_420
 
-# non accurato, pazienza
+# tenere in considerazione solo parte accurata
 
 # --------------------------------------------- FLY_421 + LOG109 --------------------------------------------- #
 # ------------------------------------------- 2023-06-17 11:03:01 -------------------------------------------- #
@@ -2800,7 +2809,7 @@ FLY421_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 1,
   lower_limit = 5,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 50,
   omit_last_n = 10
 )
 FLY421_REC_MOT_LD_1.2$laser_altitude_m_cleaned[269] <- NA
@@ -3094,7 +3103,7 @@ FLY427_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 1,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 118,
   omit_last_n = 0
 )
 
@@ -3218,7 +3227,7 @@ FLY430_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 260,
   omit_last_n = 0
 )
 
@@ -3232,7 +3241,7 @@ clean_430 <- ggplot(FLY430_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
   theme_minimal() +
   scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
   guides(color = guide_legend(title = NULL)) +
-  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
 clean_430
 
 # --------------------------------------------- FLY_431 + LOG127--------------------------------------------- #
@@ -3278,7 +3287,7 @@ FLY431_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 300,
   omit_last_n = 0
 )
 
@@ -3338,7 +3347,7 @@ FLY434_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 180,
   omit_last_n = 0
 )
 
@@ -3398,7 +3407,7 @@ FLY436_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 55,
   omit_last_n = 0
 )
 
@@ -3460,7 +3469,7 @@ FLY437_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 10,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 85,
   omit_last_n = 0
 )
 
@@ -3520,7 +3529,7 @@ FLY438_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 120,
   omit_last_n = 0
 )
 
@@ -3580,7 +3589,7 @@ FLY440_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 170,
   omit_last_n = 0
 )
 
@@ -3640,7 +3649,7 @@ FLY444_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 0,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 70,
   omit_last_n = 0
 )
 
@@ -3706,9 +3715,9 @@ FLY446_REC_MOT_LD_1.2$laser_altitude_m_cleaned3 <- lidar_filter3(
 FLY446_REC_MOT_LD_1.2$laser_altitude_m_cleaned3[c(53:90)] <- NA
 
 # Lidar Cleaning 
-FLY444_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
-  FLY444_REC_MOT_LD_1.2$laser_altitude_m,
-  FLY444_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`,
+FLY446_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
+  FLY446_REC_MOT_LD_1.2$laser_altitude_m,
+  FLY446_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`,
   window_size = 5,
   lower_limit = 0,
   upper_limit = 80,
@@ -3716,18 +3725,18 @@ FLY444_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   omit_last_n = 0
 )
 
-clean_444 <- ggplot(FLY444_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+clean_446 <- ggplot(FLY446_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
   geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
   geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
   geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
-  labs(title = "2023-07-17 11:42:43 (FLY_444 LOG_138)",
+  labs(title = "2023-07-29 12:42:31 (FLY_446 LOG_139)",
        y = "Height",
        x = "Time") +
   theme_minimal() +
   scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
   guides(color = guide_legend(title = NULL)) +
   theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
-clean_444
+clean_446
 
 # --------------------------------------------- FLY_447 + LOG140 --------------------------------------------- #
 # ------------------------------------------- 2023-07-29 12:56:18 -------------------------------------------- #
@@ -3953,7 +3962,7 @@ FLY457_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 10,
   upper_limit = 80,
-  omit_first_n = 20,
+  omit_first_n = 40,
   omit_last_n = 10
 )
 
@@ -4013,7 +4022,7 @@ FLY458_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 50,
   upper_limit = 80,
-  omit_first_n = 600,
+  omit_first_n = 610,
   omit_last_n = 10
 )
 
@@ -4133,7 +4142,7 @@ FLY461_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 50,
   upper_limit = 80,
-  omit_first_n = 60,
+  omit_first_n = 30,
   omit_last_n = 10
 )
 
@@ -4375,7 +4384,7 @@ FLY466_REC_MOT_LD_1.2_clean$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 10,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 50,
   omit_last_n = 10
 )
 
@@ -4435,7 +4444,7 @@ FLY472_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 10,
   upper_limit = 80,
-  omit_first_n = 0,
+  omit_first_n = 392,
   omit_last_n = 0
 )
 
@@ -4555,7 +4564,7 @@ FLY477_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 10,
   upper_limit = 50,
-  omit_first_n = 120,
+  omit_first_n = 252,
   omit_last_n = 0
 )
 
@@ -4617,7 +4626,7 @@ FLY478_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 10,
   upper_limit = 50,
-  omit_first_n = 120,
+  omit_first_n = 162,
   omit_last_n = 10
 )
 
@@ -4677,7 +4686,7 @@ FLY484_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 10,
   upper_limit = 50,
-  omit_first_n = 10,
+  omit_first_n = 50,
   omit_last_n = 10
 )
 
@@ -4737,7 +4746,7 @@ FLY487_REC_MOT_LD_1.2$laser_altitude_m_cleaned <- lidar_filter3(
   window_size = 5,
   lower_limit = 10,
   upper_limit = 50,
-  omit_first_n = 10,
+  omit_first_n = 20,
   omit_last_n = 0
 )
 
@@ -4769,10 +4778,10 @@ clean_plot_names <- c("clean_297", "clean_298", "clean_299", "clean_304" ,"clean
                       "clean_383", "clean_384", "clean_387", "clean_388", "clean_389", "clean_396", "clean_400",
                       "clean_401", "clean_402", "clean_411", "clean_412", "clean_414" ,"clean_417", "clean_420", 
                       "clean_421", "clean_423", "clean_424", "clean_425" ,"clean_427", "clean_429", "clean_430", 
-                      "clean_431", "clean_434", "clean_436", "clean_438", "clean_440", "clean_444", "clean_447", 
-                      "clean_452", "clean_456", "clean_457", "clean_458", "clean_459", "clean_461", "clean_462", 
-                      "clean_463", "clean_464", "clean_466", "clean_472", "clean_475", "clean_477", "clean_478", 
-                      "clean_484", "clean_487"
+                      "clean_431", "clean_434", "clean_436", "clean_438", "clean_440", "clean_444", "clean_446",
+                      "clean_447", "clean_452", "clean_456", "clean_457", "clean_458", "clean_459", "clean_461", 
+                      "clean_462", "clean_463", "clean_464", "clean_466", "clean_472", "clean_475", "clean_477", 
+                      "clean_478", "clean_484", "clean_487"
 )
 
 
@@ -4807,32 +4816,3 @@ for (page in 1:num_pages) {
 
 # Chiudi il PDF
 dev.off()
-
-###### TILT LIDAR ANALYSIS #####
-
-#### Tilt Laser analysis ####
-plot_tilt_424 <- ggplot(FLY424_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
-  geom_line(aes(y = FLY424_REC_MOT_LD_1.2$laser_altitude_m, color = "Variable 1"), size = 0.5) +
-  geom_line(aes(y = FLY424_REC_MOT_LD_1.2$tilt_deg, color = "Variable 2"), size = 0.5) +
-  scale_color_manual(values = c("Variable 1" = "blue", "Variable 2" = "darkorange")) +
-  labs(x = "Time", y = "Altezza Laser / Tilt Laser") +
-  theme_minimal()
-
-plot_tilt_424 + scale_y_continuous(
-  sec.axis = sec_axis(~./5, name = "Variable 2", breaks = seq(-5, 5, 1)))
-
-# plot Lidar & tilt 
-LD_TILT_285 <- ggplot(FLY285_REC_MOT_LD_1.2) +
-  geom_line(aes(x = GPS.dateTimeStamp, y = laser_altitude_m, color = "Height"), size = 0.7, linetype = "solid") +
-  geom_line(aes(x = GPS.dateTimeStamp, y = tilt_deg, color = "Tilt"), size = 0.7, linetype = "solid") +
-  labs(title = "2021-04-22 17:10:01 (FLY_285) Lidar Tilt", x = "Time", y = "Height (m)") +
-  theme_minimal() +
-  theme(legend.position = c(0.9, 0.9),
-        legend.box = "horizontal", legend.background = element_rect(color = "gray", fill = "white"),
-        legend.margin = margin(t = -6, r = 6, b = -1.5, l = 6), axis.text = element_text(size = 8),
-        axis.title = element_text(size = 8), legend.text = element_text(size = 6)) +
-  scale_colour_manual(name = NULL, values = c("Height" = "darkorange", "Tilt" = "darkgray")) +
-  theme(plot.title = element_text(size = 10, face = "bold"))
-LD_TILT_285
-
-
