@@ -124,3 +124,33 @@ GAP_297 <- GAP(FLY297_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:rela
 cat("Media delle differenze:", GAP_297$mean_diff, "\n")
 cat("Moda delle differenze:", GAP_297$mode_diff, "\n")
 cat("Mediana delle differenze:", GAP_297$median_diff, "\n")
+
+
+#### Tilt correction funtion ####
+
+# Definizione della funzione `correct_altitude` che corregge l'altezza misurata in base all'angolo di tilt
+correct_altitude <- function(dataset) {
+  # Verifica se le colonne richieste sono presenti nel dataset
+  if (!("laser_altitude_m_cleaned" %in% colnames(dataset)) ||
+      !("tilt_deg" %in% colnames(dataset))) {
+    stop("Le colonne richieste non sono presenti nel dataset.")
+  }
+
+  # Crea e calcola la colonna corretta `laser_altitude_tilt_corrected`
+  # L'equazione viene applicata solo ai valori di angolo superiori a 5 gradi(visto che lo zero del tilt è a 5° ma non registra dati in negativo, quindi per tutto ciò che è onferiore di 5 è meglio non correggere) 
+  # e ai valori non NA nella colonna laser_altitude_m_cleaned poi il risultato è arrotondato a due decimali
+  dataset$laser_altitude_tilt_corrected <- ifelse(
+    is.na(dataset$laser_altitude_m_cleaned) | dataset$tilt_deg <= 5,
+    dataset$laser_altitude_m_cleaned,
+    round(dataset$laser_altitude_m_cleaned * cos((dataset$tilt_deg - 5) * pi / 180), 2)
+  )
+
+  # Restituisci il dataset modificato
+  return(dataset)
+}
+
+# Utilizzo della funzione con il tuo dataset
+FLY484_REC_MOT_LD_1.2 <- correct_altitude(FLY484_REC_MOT_LD_1.2)
+
+
+
