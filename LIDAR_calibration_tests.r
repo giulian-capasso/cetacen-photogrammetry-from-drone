@@ -193,32 +193,3 @@ cambiamento_proporzionale <- (misura_10 - misura_0) / misura_0
 ((39.84779 - 40) / 40) * 100
 # [1] -0.380525
 # 0.38% più piccola
-
-
-#### Tilt correction funtion ####
-
-# Definizione della funzione `correct_altitude` che corregge l'altezza misurata in base all'angolo di tilt
-correct_altitude <- function(dataset) {
-  # Verifica se le colonne richieste sono presenti nel dataset
-  if (!("laser_altitude_m_cleaned" %in% colnames(dataset)) ||
-      !("tilt_deg" %in% colnames(dataset))) {
-    stop("Le colonne richieste non sono presenti nel dataset.")
-  }
-
-  # Crea e calcola la colonna corretta `laser_altitude_tilt_corrected`
-  # L'equazione viene applicata solo ai valori di angolo superiori a 5 gradi(visto che lo zero del tilt è a 5° ma non registra dati in negativo, quindi per tutto ciò che è onferiore di 5 è meglio non correggere) 
-  # e ai valori non NA nella colonna laser_altitude_m_cleaned poi il risultato è arrotondato a due decimali
-  dataset$laser_altitude_tilt_corrected <- ifelse(
-    is.na(dataset$laser_altitude_m_cleaned) | dataset$tilt_deg <= 5,
-    dataset$laser_altitude_m_cleaned,
-    round(dataset$laser_altitude_m_cleaned * cos((dataset$tilt_deg - 5) * pi / 180), 2)
-  )
-
-  # Restituisci il dataset modificato
-  return(dataset)
-}
-
-# Utilizzo della funzione con il tuo dataset
-FLY484_REC_MOT_LD_1.2 <- correct_altitude(FLY484_REC_MOT_LD_1.2)
-
-
