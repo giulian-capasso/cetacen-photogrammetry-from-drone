@@ -21,6 +21,10 @@ spike_cleaning <- function(data, column_name, new_column_name, lower_limit, uppe
 }
 FLY304_REC_MOT_LD_1.2 <- spike_cleaning(FLY304_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", lower_limit = 2, upper_limit = 60, omit_first_n = 5, omit_last_n = 5)
 
+# ----------------------------------------------------------------------------------------------- #
+#### Correct altitude ####
+# ----------------------------------------------------------------------------------------------- #
+
 correct_altitude <- function(dataset) {
   if (!("laser_altitude_m_cleaned" %in% colnames(dataset)) ||
       !("tilt_corrected" %in% colnames(dataset))) {
