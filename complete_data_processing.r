@@ -3692,7 +3692,4698 @@ ggplot(df_FLY388, aes(x = seconds_FLY388, y = relative_diff)) +
   labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
   theme_minimal()
 
-#### 
+#### FLY_389 + LOG_0086 ####
+# Import csv
+FLY389_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY389_REC_MOT.csv")
+# Import LOG 
+LOG_0086 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0086.CSV",  
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY389_REC_MOT_clean1 <- distinct(FLY389_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Reneme FLY "`GPS:dateTimeStamp`" name 
+FLY389_REC_MOT_ready <- FLY389_REC_MOT_clean1 %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0086_R <- transform(LOG_0086, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0086_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0086_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY389_REC_MOT_LD <- left_join(FLY389_REC_MOT_ready, LOG_0086_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY389_REC_MOT_LD_1 <- FLY389_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY389_REC_MOT_LD_1.2 <- FLY389_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Clean "0002-11-30 00:00:00 UTC" value
+FLY389_REC_MOT_LD_1.2_clean <- subset(FLY389_REC_MOT_LD_1.2, !grepl("2015-10-21", GPS.dateTimeStamp))
+
+# Pulizia spikes 
+FLY389_REC_MOT_LD_1.2_clean <- spike_cleaning(FLY389_REC_MOT_LD_1.2_clean, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 416, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY389_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2022-10-19 11:36:11 (FLY_389 LOG_0086)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY389_REC_MOT_LD_1.2_clean$tilt_corrected <- FLY389_REC_MOT_LD_1.2_clean$tilt_deg - 5
+FLY389_REC_MOT_LD_1.2_clean$tilt_corrected <- ifelse(
+  is.na(FLY389_REC_MOT_LD_1.2_clean$tilt_corrected),
+  NA,
+  ifelse(FLY389_REC_MOT_LD_1.2_clean$tilt_corrected < 0, -FLY389_REC_MOT_LD_1.2_clean$tilt_corrected, FLY389_REC_MOT_LD_1.2_clean$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY389_REC_MOT_LD_1.2_clean <- correct_altitude(FLY389_REC_MOT_LD_1.2_clean)
+
+# check results by plotting
+ggplot(FLY389_REC_MOT_LD_1.2_clean, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2022-10-19 11:36:11 (FLY_389 LOG_0086)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY389_REC_MOT_LD_1.2_clean), by = 20))
+
+# Calcola Gap 
+FLY389_REC_MOT_LD_1.2_clean <- GAP3(FLY389_REC_MOT_LD_1.2_clean, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(561, 691)))
+FLY389_REC_MOT_LD_1.2_clean$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY389_REC_MOT_LD_1.2_clean, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) - sd(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) + sd(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_389<- sd(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)/mean(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+sd_389<- sd(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY389_REC_MOT_LD_1.2_clean$relative_diff <- FLY389_REC_MOT_LD_1.2_clean$diff_col / mean(FLY389_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+ggplot(FLY389_REC_MOT_LD_1.2_clean, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY389_REC_MOT_LD_1.2_clean <- FLY389_REC_MOT_LD_1.2_clean %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY389 <- FLY389_REC_MOT_LD_1.2_clean %>% select(seconds, relative_diff)
+df_FLY389 <- df_FLY389 %>% rename(seconds_FLY389 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY389 <- df_FLY389 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY389, aes(x = seconds_FLY389, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_393 + LOG_0088 ####
+# Import csv
+FLY393_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY393_REC_MOT.csv")
+# Import LOG 
+LOG_0088 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0088.CSV",  
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY393_REC_MOT_clean <- distinct(FLY393_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY393_REC_MOT_ready <- FLY393_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0088_R <- transform(LOG_0088, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0088_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0088_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY393_REC_MOT_LD <- left_join(FLY393_REC_MOT_ready, LOG_0088_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY393_REC_MOT_LD_1 <- FLY393_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY393_REC_MOT_LD_1.2 <- FLY393_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY393_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY393_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# check results by plotting
+ggplot(FLY393_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  #geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2022-10-26 16:21:30 (FLY_393 LOG_0088)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY393_REC_MOT_LD_1.2$tilt_corrected <- FLY393_REC_MOT_LD_1.2$tilt_deg - 5
+FLY393_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY393_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY393_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY393_REC_MOT_LD_1.2$tilt_corrected, FLY393_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY393_REC_MOT_LD_1.2 <- correct_altitude(FLY393_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY393_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+ # geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2022-07-22 10:24:31 (FLY_332 LOG_0052)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY393_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY393_REC_MOT_LD_1.2 <- GAP3(FLY393_REC_MOT_LD_1.2, "laser_altitude_m", "osd_data:relativeHeight[meters]", list(c(31, 211)))
+FLY393_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY393_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_393<- sd(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_393<- sd(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY393_REC_MOT_LD_1.2$relative_diff <- FLY393_REC_MOT_LD_1.2$diff_col / mean(FLY393_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY393_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY393_REC_MOT_LD_1.2 <- FLY393_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY393 <- FLY393_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY393 <- df_FLY393 %>% rename(seconds_FLY393 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY393 <- df_FLY393 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY393, aes(x = seconds_FLY393, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_396 + LOG_0090 ####
+# Import csv
+FLY396_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY396_REC_MOT.csv")
+# Import LOG 
+LOG_0090 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0090.CSV",  
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY396_REC_MOT_clean <- distinct(FLY396_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY396_REC_MOT_ready <- FLY396_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0090_R <- transform(LOG_0090, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0090_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0090_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY396_REC_MOT_LD <- left_join(FLY396_REC_MOT_ready, LOG_0090_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY396_REC_MOT_LD_1 <- FLY396_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY396_REC_MOT_LD_1.2 <- FLY396_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Clean "0002-11-30 00:00:00 UTC" value
+FLY396_REC_MOT_LD_1.2_clean <- subset(FLY396_REC_MOT_LD_1.2, !grepl("0002-11-30", GPS.dateTimeStamp))
+
+# Pulizia spikes 
+FLY396_REC_MOT_LD_1.2_clean <- spike_cleaning(FLY396_REC_MOT_LD_1.2_clean, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 330, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY396_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 08:45:32 (FLY_396 LOG_0090)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY396_REC_MOT_LD_1.2_clean$tilt_corrected <- FLY396_REC_MOT_LD_1.2_clean$tilt_deg - 5
+FLY396_REC_MOT_LD_1.2_clean$tilt_corrected <- ifelse(
+  is.na(FLY396_REC_MOT_LD_1.2_clean$tilt_corrected),
+  NA,
+  ifelse(FLY396_REC_MOT_LD_1.2_clean$tilt_corrected < 0, -FLY396_REC_MOT_LD_1.2_clean$tilt_corrected, FLY396_REC_MOT_LD_1.2_clean$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY396_REC_MOT_LD_1.2_clean <- correct_altitude(FLY396_REC_MOT_LD_1.2_clean)
+
+# check results by plotting
+ggplot(FLY396_REC_MOT_LD_1.2_clean, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 08:45:32 (FLY_396 LOG_0090)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY396_REC_MOT_LD_1.2_clean), by = 20))
+
+# Calcola Gap 
+FLY396_REC_MOT_LD_1.2_clean <- GAP3(FLY396_REC_MOT_LD_1.2_clean, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(381, 411), c(445,481), c(541, 555), c(561,585), c(591,601)))
+FLY396_REC_MOT_LD_1.2_clean$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY396_REC_MOT_LD_1.2_clean, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) - sd(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) + sd(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_396<- sd(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)/mean(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+sd_396<- sd(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY396_REC_MOT_LD_1.2_clean$relative_diff <- FLY396_REC_MOT_LD_1.2_clean$diff_col / mean(FLY396_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+ggplot(FLY396_REC_MOT_LD_1.2_clean, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY396_REC_MOT_LD_1.2_clean <- FLY396_REC_MOT_LD_1.2_clean %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY396 <- FLY396_REC_MOT_LD_1.2_clean %>% select(seconds, relative_diff)
+df_FLY396 <- df_FLY396 %>% rename(seconds_FLY396 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY396 <- df_FLY396 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY396, aes(x = seconds_FLY396, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_400 + LOG_0093 ####
+# Import csv
+FLY400_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY400_REC_MOT.csv")
+# Import LOG 
+LOG_0093 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0093.CSV",  
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY400_REC_MOT_clean <- distinct(FLY400_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY400_REC_MOT_ready <- FLY400_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0093_R <- transform(LOG_0093, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0093_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0093_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY400_REC_MOT_LD <- left_join(FLY400_REC_MOT_ready, LOG_0093_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY400_REC_MOT_LD_1 <- FLY400_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY400_REC_MOT_LD_1.2 <- FLY400_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY400_REC_MOT_LD_1.2 <- spike_cleaning(FLY400_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 160, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY400_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 09:47:57 (FLY_400 LOG_0093)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY400_REC_MOT_LD_1.2$tilt_corrected <- FLY400_REC_MOT_LD_1.2$tilt_deg - 5
+FLY400_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY400_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY400_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY400_REC_MOT_LD_1.2$tilt_corrected, FLY400_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY400_REC_MOT_LD_1.2 <- correct_altitude(FLY400_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY400_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 09:47:57 (FLY_400 LOG_0093)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY400_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY400_REC_MOT_LD_1.2 <- GAP3(FLY400_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(211, 231), c(251,311)))
+FLY400_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY400_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_400<- sd(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_400<- sd(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY400_REC_MOT_LD_1.2$relative_diff <- FLY400_REC_MOT_LD_1.2$diff_col / mean(FLY400_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY400_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY400_REC_MOT_LD_1.2 <- FLY400_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY400 <- FLY400_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY400 <- df_FLY400 %>% rename(seconds_FLY400 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY400 <- df_FLY400 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY400, aes(x = seconds_FLY400, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_401 + LOG_0094 ####
+# Import csv
+FLY401_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY401_REC_MOT.csv")
+# Import LOG 
+LOG_0094 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0094.CSV",  
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY401_REC_MOT_clean <- distinct(FLY401_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY401_REC_MOT_ready <- FLY401_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0094_R <- transform(LOG_0094, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0094_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0094_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY401_REC_MOT_LD <- left_join(FLY401_REC_MOT_ready, LOG_0094_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY401_REC_MOT_LD_1 <- FLY401_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY401_REC_MOT_LD_1.2 <- FLY401_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY401_REC_MOT_LD_1.2 <- spike_cleaning(FLY401_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 428, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY401_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 09:57:52 (FLY_401 LOG_0094)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY401_REC_MOT_LD_1.2$tilt_corrected <- FLY401_REC_MOT_LD_1.2$tilt_deg - 5
+FLY401_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY401_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY401_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY401_REC_MOT_LD_1.2$tilt_corrected, FLY401_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY401_REC_MOT_LD_1.2 <- correct_altitude(FLY401_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY401_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 09:57:52 (FLY_401 LOG_0094)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY401_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY401_REC_MOT_LD_1.2 <- GAP3(FLY401_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(551, 580)))
+FLY401_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY401_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_401<- sd(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_401<- sd(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY401_REC_MOT_LD_1.2$relative_diff <- FLY401_REC_MOT_LD_1.2$diff_col / mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY401_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY401_REC_MOT_LD_1.2 <- FLY401_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY401 <- FLY401_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY401 <- df_FLY401 %>% rename(seconds_FLY401 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY401 <- df_FLY401 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY401, aes(x = seconds_FLY401, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_402 + LOG_0095 ####
+# Import csv
+FLY402_REC_MOT <- read_csv("Desktop/Matched 1/BAR/FLY402_REC_MOT.csv")
+# Import LOG 
+LOG_0095 <- read_table2("Desktop/Matched 1/LIDAR DATA copia/LOG_0095.CSV",  
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY402_REC_MOT_clean <- distinct(FLY402_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY402_REC_MOT_ready <- FLY402_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0095_R <- transform(LOG_0095, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0095_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0095_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY402_REC_MOT_LD <- left_join(FLY402_REC_MOT_ready, LOG_0095_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY402_REC_MOT_LD_1 <- FLY402_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY402_REC_MOT_LD_1.2 <- FLY402_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY402_REC_MOT_LD_1.2 <- spike_cleaning(FLY402_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 60, omit_first_n = 40, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY402_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 12:49:01 (FLY_402 LOG_0095)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY402_REC_MOT_LD_1.2$tilt_corrected <- FLY402_REC_MOT_LD_1.2$tilt_deg - 5
+FLY402_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY402_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY402_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY402_REC_MOT_LD_1.2$tilt_corrected, FLY402_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY402_REC_MOT_LD_1.2 <- correct_altitude(FLY402_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY402_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 12:49:01 (FLY_402 LOG_0095)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY402_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY402_REC_MOT_LD_1.2 <- GAP3(FLY402_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(81, 191)))
+FLY402_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY402_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_402<- sd(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_402<- sd(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY402_REC_MOT_LD_1.2$relative_diff <- FLY402_REC_MOT_LD_1.2$diff_col / mean(FLY402_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY402_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY402_REC_MOT_LD_1.2 <- FLY402_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY402 <- FLY402_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY402 <- df_FLY402 %>% rename(seconds_FLY402 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY402 <- df_FLY402 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY402, aes(x = seconds_FLY402, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_411 + LOG99 ####
+
+# Import csv
+FLY411_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY411_REC_MOT.csv")
+# Import LOG 
+LOG_0099 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0099.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY411_REC_MOT_clean <- distinct(FLY411_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY411_REC_MOT_ready <- FLY411_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0099_R <- transform(LOG_0099, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0099_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0099_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY411_REC_MOT_LD <- left_join(FLY411_REC_MOT_ready, LOG_0099_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY411_REC_MOT_LD_1 <- FLY411_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY411_REC_MOT_LD_1.2 <- FLY411_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# check results by plotting
+ggplot(FLY411_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  #geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-06 09:16:31 (FLY_411 LOG_0099)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY411_REC_MOT_LD_1.2$tilt_corrected <- FLY411_REC_MOT_LD_1.2$tilt_deg - 5
+FLY411_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY411_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY411_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY411_REC_MOT_LD_1.2$tilt_corrected, FLY411_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY411_REC_MOT_LD_1.2 <- correct_altitude(FLY411_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY411_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  #geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-06 09:16:31 (FLY_411 LOG_0099)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY411_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY411_REC_MOT_LD_1.2 <- GAP3(FLY411_REC_MOT_LD_1.2, "laser_altitude_m", "osd_data:relativeHeight[meters]", list(c(41, 311)))
+FLY411_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY411_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_411<- sd(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_411<- sd(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY411_REC_MOT_LD_1.2$relative_diff <- FLY411_REC_MOT_LD_1.2$diff_col / mean(FLY411_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY411_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY411_REC_MOT_LD_1.2 <- FLY411_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY411 <- FLY411_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY411 <- df_FLY411 %>% rename(seconds_FLY411 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY411 <- df_FLY411 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY411, aes(x = seconds_FLY411, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_412 + LOG100 ####
+# Import csv
+FLY412_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY412_REC_MOT.csv")
+# Import LOG 
+LOG_0100 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0100.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY412_REC_MOT_clean <- distinct(FLY412_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY412_REC_MOT_ready <- FLY412_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0100_R <- transform(LOG_0100, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0100_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0100_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY412_REC_MOT_LD <- left_join(FLY412_REC_MOT_ready, LOG_0100_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY412_REC_MOT_LD_1 <- FLY412_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY412_REC_MOT_LD_1.2 <- FLY412_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Clean "0002-11-30"
+FLY412_REC_MOT_LD_1.2_clean <- subset(FLY412_REC_MOT_LD_1.2, !grepl("0002-11-30", GPS.dateTimeStamp))
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY412_REC_MOT_LD_1.2_clean$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY412_REC_MOT_LD_1.2_clean$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY412_REC_MOT_LD_1.2_clean <- spike_cleaning(FLY412_REC_MOT_LD_1.2_clean, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 00, upper_limit = 70, omit_first_n = 360, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY412_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-06 09:29:32 (FLY_412 LOG_0100)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY412_REC_MOT_LD_1.2_clean$tilt_corrected <- FLY412_REC_MOT_LD_1.2_clean$tilt_deg - 5
+FLY412_REC_MOT_LD_1.2_clean$tilt_corrected <- ifelse(
+  is.na(FLY412_REC_MOT_LD_1.2_clean$tilt_corrected),
+  NA,
+  ifelse(FLY412_REC_MOT_LD_1.2_clean$tilt_corrected < 0, -FLY412_REC_MOT_LD_1.2_clean$tilt_corrected, FLY412_REC_MOT_LD_1.2_clean$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY412_REC_MOT_LD_1.2_clean <- correct_altitude(FLY412_REC_MOT_LD_1.2_clean)
+
+# check results by plotting
+ggplot(FLY412_REC_MOT_LD_1.2_clean, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-06 09:29:32 (FLY_412 LOG_0100)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY412_REC_MOT_LD_1.2_clean), by = 20))
+
+# Calcola Gap 
+FLY412_REC_MOT_LD_1.2_clean <- GAP3(FLY412_REC_MOT_LD_1.2_clean, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(550, 575)))
+FLY412_REC_MOT_LD_1.2_clean$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY412_REC_MOT_LD_1.2_clean, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) - sd(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) + sd(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_412<- sd(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)/mean(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+sd_412<- sd(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY412_REC_MOT_LD_1.2_clean$relative_diff <- FLY412_REC_MOT_LD_1.2_clean$diff_col / mean(FLY412_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+ggplot(FLY412_REC_MOT_LD_1.2_clean, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY412_REC_MOT_LD_1.2_clean <- FLY412_REC_MOT_LD_1.2_clean %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY412<- FLY412_REC_MOT_LD_1.2_clean %>% select(seconds, relative_diff)
+df_FLY412 <- df_FLY412 %>% rename(seconds_FLY412 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY412 <- df_FLY412 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY412, aes(x = seconds_FLY412, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_414 + LOG103 ####
+# Import csv
+FLY414_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY414_REC_MOT.csv")
+# Import LOG 
+LOG_0103 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0103.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY414_REC_MOT_clean <- distinct(FLY414_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY414_REC_MOT_ready <- FLY414_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0103_R <- transform(LOG_0103, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0103_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0103_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY414_REC_MOT_LD <- left_join(FLY414_REC_MOT_ready, LOG_0103_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY414_REC_MOT_LD_1 <- FLY414_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY414_REC_MOT_LD_1.2 <- FLY414_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY414_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY414_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY414_REC_MOT_LD_1.2 <- spike_cleaning(FLY414_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 145, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY414_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-06 16:18:31 (FLY_414 LOG_0103)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY414_REC_MOT_LD_1.2$tilt_corrected <- FLY414_REC_MOT_LD_1.2$tilt_deg - 5
+FLY414_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY414_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY414_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY414_REC_MOT_LD_1.2$tilt_corrected, FLY414_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY414_REC_MOT_LD_1.2 <- correct_altitude(FLY414_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY414_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-06 16:18:31 (FLY_414 LOG_0103)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY414_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY414_REC_MOT_LD_1.2 <- GAP3(FLY414_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(191, 261), c(341,371)))
+FLY414_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY414_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_414<- sd(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_414<- sd(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY414_REC_MOT_LD_1.2$relative_diff <- FLY414_REC_MOT_LD_1.2$diff_col / mean(FLY414_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY414_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY414_REC_MOT_LD_1.2 <- FLY414_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY414 <- FLY414_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY414 <- df_FLY414 %>% rename(seconds_FLY414 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY414 <- df_FLY414 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY414, aes(x = seconds_FLY414, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_417 + LOG106 ####
+# Import csv
+FLY417_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY417_REC_MOT.csv")
+# Import LOG 
+LOG_0106 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0106.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY417_REC_MOT_clean <- distinct(FLY417_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY417_REC_MOT_ready <- FLY417_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0106_R <- transform(LOG_0106, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0106_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0106_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY417_REC_MOT_LD <- left_join(FLY417_REC_MOT_ready, LOG_0106_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY417_REC_MOT_LD_1 <- FLY417_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY417_REC_MOT_LD_1.2 <- FLY417_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY417_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY417_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY417_REC_MOT_LD_1.2 <- spike_cleaning(FLY417_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 188, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY417_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-24 10:29:31 (FLY_417 LOG_0106)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY417_REC_MOT_LD_1.2$tilt_corrected <- FLY417_REC_MOT_LD_1.2$tilt_deg - 5
+FLY417_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY417_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY417_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY417_REC_MOT_LD_1.2$tilt_corrected, FLY417_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY417_REC_MOT_LD_1.2 <- correct_altitude(FLY417_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY417_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-05-24 10:29:31 (FLY_417 LOG_0106)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY417_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY417_REC_MOT_LD_1.2 <- GAP3(FLY417_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(251, 331), c(381,441), c(561,741), c(791,801)))
+FLY417_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY417_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_417<- sd(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_417<- sd(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY417_REC_MOT_LD_1.2$relative_diff <- FLY417_REC_MOT_LD_1.2$diff_col / mean(FLY417_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY417_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY417_REC_MOT_LD_1.2 <- FLY417_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY417 <- FLY417_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY417 <- df_FLY417 %>% rename(seconds_FLY417 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY417 <- df_FLY417 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY417, aes(x = seconds_FLY417, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_420 + LOG108 ####
+# Import csv
+FLY420_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY420_REC_MOT.csv")
+# Import LOG 
+LOG_0108 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0108.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY420_REC_MOT_clean <- distinct(FLY420_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY420_REC_MOT_ready <- FLY420_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0108_R <- transform(LOG_0108, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0108_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0108_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY420_REC_MOT_LD <- left_join(FLY420_REC_MOT_ready, LOG_0108_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY420_REC_MOT_LD_1 <- FLY420_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY420_REC_MOT_LD_1.2 <- FLY420_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Clean "0002-11-30 00:00:00 UTC" value
+FLY420_REC_MOT_LD_1.2_clean <- subset(FLY420_REC_MOT_LD_1.2, !grepl("0002-11-30", GPS.dateTimeStamp))
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY420_REC_MOT_LD_1.2_clean$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY420_REC_MOT_LD_1.2_clean$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY420_REC_MOT_LD_1.2_clean <- spike_cleaning(FLY420_REC_MOT_LD_1.2_clean, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY420_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-17 09:19:13 (FLY_420 LOG_0108)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY420_REC_MOT_LD_1.2_clean$tilt_corrected <- FLY420_REC_MOT_LD_1.2_clean$tilt_deg - 5
+FLY420_REC_MOT_LD_1.2_clean$tilt_corrected <- ifelse(
+  is.na(FLY420_REC_MOT_LD_1.2_clean$tilt_corrected),
+  NA,
+  ifelse(FLY420_REC_MOT_LD_1.2_clean$tilt_corrected < 0, -FLY420_REC_MOT_LD_1.2_clean$tilt_corrected, FLY420_REC_MOT_LD_1.2_clean$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY420_REC_MOT_LD_1.2_clean <- correct_altitude(FLY420_REC_MOT_LD_1.2_clean)
+
+# check results by plotting
+ggplot(FLY420_REC_MOT_LD_1.2_clean, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-17 09:19:13 (FLY_420 LOG_0108)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY420_REC_MOT_LD_1.2_clean), by = 20))
+
+# Calcola Gap 
+FLY420_REC_MOT_LD_1.2_clean <- GAP3(FLY420_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(101, 481)))
+FLY420_REC_MOT_LD_1.2_clean$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY420_REC_MOT_LD_1.2_clean, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) - sd(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) + sd(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_420<- sd(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)/mean(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+sd_420<- sd(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY420_REC_MOT_LD_1.2_clean$relative_diff <- FLY420_REC_MOT_LD_1.2_clean$diff_col / mean(FLY420_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+ggplot(FLY420_REC_MOT_LD_1.2_clean, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY420_REC_MOT_LD_1.2_clean <- FLY420_REC_MOT_LD_1.2_clean %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY420 <- FLY420_REC_MOT_LD_1.2_clean %>% select(seconds, relative_diff)
+df_FLY420 <- df_FLY420 %>% rename(seconds_FLY420 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY420 <- df_FLY420 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY420, aes(x = seconds_FLY420, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_421 + LOG109 ####
+# Import csv
+FLY421_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY421_REC_MOT.csv")
+# Import LOG 
+LOG_0109 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0109.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY421_REC_MOT_clean <- distinct(FLY421_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY421_REC_MOT_ready <- FLY421_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0109_R <- transform(LOG_0109, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0109_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0109_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY421_REC_MOT_LD <- left_join(FLY421_REC_MOT_ready, LOG_0109_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY421_REC_MOT_LD_1 <- FLY421_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY421_REC_MOT_LD_1.2 <- FLY421_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY421_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY421_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY421_REC_MOT_LD_1.2 <- spike_cleaning(FLY421_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 30, upper_limit = 80, omit_first_n = 59, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY421_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-17 11:03:01 (FLY_421 LOG_109)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY421_REC_MOT_LD_1.2$tilt_corrected <- FLY421_REC_MOT_LD_1.2$tilt_deg - 5
+FLY421_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY421_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY421_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY421_REC_MOT_LD_1.2$tilt_corrected, FLY421_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY421_REC_MOT_LD_1.2 <- correct_altitude(FLY421_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY421_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-17 11:03:01 (FLY_421 LOG_109)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY421_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY421_REC_MOT_LD_1.2 <- GAP3(FLY421_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(81, 261)))
+FLY421_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY421_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_421<- sd(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_421<- sd(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY421_REC_MOT_LD_1.2$relative_diff <- FLY421_REC_MOT_LD_1.2$diff_col / mean(FLY421_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY421_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY421_REC_MOT_LD_1.2 <- FLY421_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY421 <- FLY421_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY421 <- df_FLY421 %>% rename(seconds_FLY421 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY421 <- df_FLY421 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY421, aes(x = seconds_FLY421, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_423 + LOG112 ####
+# Import csv
+FLY423_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY423_REC_MOT.csv")
+# Import LOG 
+LOG_0112 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0112.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY423_REC_MOT_clean <- distinct(FLY423_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY423_REC_MOT_ready <- FLY423_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0112_R <- transform(LOG_0112, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0112_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0112_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY423_REC_MOT_LD <- left_join(FLY423_REC_MOT_ready, LOG_0112_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY423_REC_MOT_LD_1 <- FLY423_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY423_REC_MOT_LD_1.2 <- FLY423_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY423_REC_MOT_LD_1.2 <- spike_cleaning(FLY423_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 5, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY423_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 05:37:01 (FLY_423)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY423_REC_MOT_LD_1.2$tilt_corrected <- FLY423_REC_MOT_LD_1.2$tilt_deg - 5
+FLY423_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY423_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY423_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY423_REC_MOT_LD_1.2$tilt_corrected, FLY423_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY423_REC_MOT_LD_1.2 <- correct_altitude(FLY423_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY423_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 05:37:01 (FLY_423)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY423_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY423_REC_MOT_LD_1.2 <- GAP3(FLY423_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(61, 91)))
+FLY423_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY423_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY401_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_423<- sd(FLY423_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY423_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_423<- sd(FLY423_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY423_REC_MOT_LD_1.2$relative_diff <- FLY423_REC_MOT_LD_1.2$diff_col / mean(FLY423_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY423_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY423_REC_MOT_LD_1.2 <- FLY423_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY423 <- FLY423_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY423 <- df_FLY423 %>% rename(seconds_FLY423 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY423 <- df_FLY423 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY423, aes(x = seconds_FLY423, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_424 + LOG113 ####
+# Import csv
+FLY424_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY424_REC_MOT.csv")
+# Import LOG 
+LOG_0113 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0113.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY424_REC_MOT_clean <- distinct(FLY424_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY424_REC_MOT_ready <- FLY424_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0113_R <- transform(LOG_0113, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0113_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0113_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY424_REC_MOT_LD <- left_join(FLY424_REC_MOT_ready, LOG_0113_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY424_REC_MOT_LD_1 <- FLY424_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY424_REC_MOT_LD_1.2 <- FLY424_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY424_REC_MOT_LD_1.2 <- spike_cleaning(FLY424_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY424_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 09:02:01 (FLY_424 LOG_113)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY424_REC_MOT_LD_1.2$tilt_corrected <- FLY424_REC_MOT_LD_1.2$tilt_deg - 5
+FLY424_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY424_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY424_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY424_REC_MOT_LD_1.2$tilt_corrected, FLY424_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY424_REC_MOT_LD_1.2 <- correct_altitude(FLY424_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY424_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 09:02:01 (FLY_424 LOG_113)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY424_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY424_REC_MOT_LD_1.2 <- GAP3(FLY424_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(91, 231)))
+FLY424_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY424_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_424<- sd(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_424<- sd(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY424_REC_MOT_LD_1.2$relative_diff <- FLY424_REC_MOT_LD_1.2$diff_col / mean(FLY424_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY424_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY424_REC_MOT_LD_1.2 <- FLY424_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY424 <- FLY424_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY424 <- df_FLY424 %>% rename(seconds_FLY424 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY424 <- df_FLY424 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY424, aes(x = seconds_FLY424, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_425 + LOG115 ####
+# Import csv
+FLY425_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY425_REC_MOT.csv")
+# Import LOG 
+LOG_0115 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0115.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY425_REC_MOT_clean <- distinct(FLY425_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY425_REC_MOT_ready <- FLY425_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0115_R <- transform(LOG_0115, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0115_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0115_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY425_REC_MOT_LD <- left_join(FLY425_REC_MOT_ready, LOG_0115_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY425_REC_MOT_LD_1 <- FLY425_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY425_REC_MOT_LD_1.2 <- FLY425_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY425_REC_MOT_LD_1.2 <- spike_cleaning(FLY425_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY425_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 09:15:01 (FLY_425 LOG_115)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY425_REC_MOT_LD_1.2$tilt_corrected <- FLY425_REC_MOT_LD_1.2$tilt_deg - 5
+FLY425_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY425_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY425_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY425_REC_MOT_LD_1.2$tilt_corrected, FLY425_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY425_REC_MOT_LD_1.2 <- correct_altitude(FLY425_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY425_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 09:15:01 (FLY_425 LOG_115)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY425_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY425_REC_MOT_LD_1.2 <- GAP3(FLY425_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(101, 448)))
+FLY425_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY425_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_425<- sd(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_425<- sd(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY425_REC_MOT_LD_1.2$relative_diff <- FLY425_REC_MOT_LD_1.2$diff_col / mean(FLY425_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY425_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY425_REC_MOT_LD_1.2 <- FLY425_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY425 <- FLY425_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY425 <- df_FLY425 %>% rename(seconds_FLY425 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY425 <- df_FLY425 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY425, aes(x = seconds_FLY425, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_427 + LOG117 ####
+# Import csv
+FLY427_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY427_REC_MOT.csv")
+# Import LOG 
+LOG_0117 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0117.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY427_REC_MOT_clean <- distinct(FLY427_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY427_REC_MOT_ready <- FLY427_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0117_R <- transform(LOG_0117, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0117_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0117_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY427_REC_MOT_LD <- left_join(FLY427_REC_MOT_ready, LOG_0117_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY427_REC_MOT_LD_1 <- FLY427_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY427_REC_MOT_LD_1.2 <- FLY427_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY427_REC_MOT_LD_1.2 <- spike_cleaning(FLY427_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 1, upper_limit = 80, omit_first_n = 118, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY427_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 09:30:25 (FLY_427 LOG_117)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY427_REC_MOT_LD_1.2$tilt_corrected <- FLY427_REC_MOT_LD_1.2$tilt_deg - 5
+FLY427_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY427_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY427_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY427_REC_MOT_LD_1.2$tilt_corrected, FLY427_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY427_REC_MOT_LD_1.2 <- correct_altitude(FLY427_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY427_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 09:30:25 (FLY_427 LOG_117)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY427_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY427_REC_MOT_LD_1.2 <- GAP3(FLY427_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(405, 465)))
+FLY427_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY427_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_427<- sd(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_427<- sd(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY427_REC_MOT_LD_1.2$relative_diff <- FLY427_REC_MOT_LD_1.2$diff_col / mean(FLY427_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY427_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY427_REC_MOT_LD_1.2 <- FLY427_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY427 <- FLY427_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY427 <- df_FLY427 %>% rename(seconds_FLY427 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY427 <- df_FLY427 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY427, aes(x = seconds_FLY427, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_429 + LOG124 ####
+# Import csv
+FLY429_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY429_REC_MOT.csv")
+# Import LOG 
+LOG_0124 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0124.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY429_REC_MOT_clean <- distinct(FLY429_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY429_REC_MOT_ready <- FLY429_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0124_R <- transform(LOG_0124, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0124_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0124_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY429_REC_MOT_LD <- left_join(FLY429_REC_MOT_ready, LOG_0124_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY429_REC_MOT_LD_1 <- FLY429_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY429_REC_MOT_LD_1.2 <- FLY429_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY429_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY429_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY429_REC_MOT_LD_1.2 <- spike_cleaning(FLY429_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 1, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY429_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 14:32:10 (FLY_429 LOG_124)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY429_REC_MOT_LD_1.2$tilt_corrected <- FLY429_REC_MOT_LD_1.2$tilt_deg - 5
+FLY429_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY429_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY429_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY429_REC_MOT_LD_1.2$tilt_corrected, FLY429_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY429_REC_MOT_LD_1.2 <- correct_altitude(FLY429_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY429_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 14:32:10 (FLY_429 LOG_124)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY429_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY429_REC_MOT_LD_1.2 <- GAP3(FLY429_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(51, 61), c(81, 161), c(171,181)))
+FLY429_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY429_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_429<- sd(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_429<- sd(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY429_REC_MOT_LD_1.2$relative_diff <- FLY429_REC_MOT_LD_1.2$diff_col / mean(FLY429_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY429_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY429_REC_MOT_LD_1.2 <- FLY429_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY429 <- FLY429_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY429 <- df_FLY429 %>% rename(seconds_FLY429 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY429 <- df_FLY429 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY429, aes(x = seconds_FLY429, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_430 + LOG125 ####
+# Import csv
+FLY430_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY430_REC_MOT.csv")
+# Import LOG 
+LOG_0125 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0125.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY430_REC_MOT_clean <- distinct(FLY430_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY430_REC_MOT_ready <- FLY430_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0125_R <- transform(LOG_0125, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0125_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0125_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY430_REC_MOT_LD <- left_join(FLY430_REC_MOT_ready, LOG_0125_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY430_REC_MOT_LD_1 <- FLY430_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY430_REC_MOT_LD_1.2 <- FLY430_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Clean "0002-11-30 00:00:00 UTC" value
+FLY430_REC_MOT_LD_1.2_clean <- subset(FLY430_REC_MOT_LD_1.2, !grepl("0002-11-30", GPS.dateTimeStamp))
+
+# Pulizia spikes 
+FLY430_REC_MOT_LD_1.2_clean <- spike_cleaning(FLY430_REC_MOT_LD_1.2_clean, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 260, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY430_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 14:38:45 (FLY_430 LOG_125)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY430_REC_MOT_LD_1.2_clean$tilt_corrected <- FLY430_REC_MOT_LD_1.2_clean$tilt_deg - 5
+FLY430_REC_MOT_LD_1.2_clean$tilt_corrected <- ifelse(
+  is.na(FLY430_REC_MOT_LD_1.2_clean$tilt_corrected),
+  NA,
+  ifelse(FLY430_REC_MOT_LD_1.2_clean$tilt_corrected < 0, -FLY430_REC_MOT_LD_1.2_clean$tilt_corrected, FLY430_REC_MOT_LD_1.2_clean$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY430_REC_MOT_LD_1.2_clean <- correct_altitude(FLY430_REC_MOT_LD_1.2_clean)
+
+# check results by plotting
+ggplot(FLY430_REC_MOT_LD_1.2_clean, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 14:38:45 (FLY_430 LOG_125)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY430_REC_MOT_LD_1.2_clean), by = 20))
+
+# Calcola Gap 
+FLY430_REC_MOT_LD_1.2_clean <- GAP3(FLY430_REC_MOT_LD_1.2_clean, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(311, 361), c(401, 441)))
+FLY430_REC_MOT_LD_1.2_clean$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY430_REC_MOT_LD_1.2_clean, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) - sd(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) + sd(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_430<- sd(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)/mean(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+sd_430<- sd(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY430_REC_MOT_LD_1.2_clean$relative_diff <- FLY430_REC_MOT_LD_1.2_clean$diff_col / mean(FLY430_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+ggplot(FLY430_REC_MOT_LD_1.2_clean, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY430_REC_MOT_LD_1.2_clean <- FLY430_REC_MOT_LD_1.2_clean %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY430 <- FLY430_REC_MOT_LD_1.2_clean %>% select(seconds, relative_diff)
+df_FLY430 <- df_FLY430 %>% rename(seconds_FLY430 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY430 <- df_FLY430 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY430, aes(x = seconds_FLY430, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_431 + LOG127 ####
+# Import csv
+FLY431_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY431_REC_MOT.csv")
+# Import LOG 
+LOG_0127 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0127.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY431_REC_MOT_clean <- distinct(FLY431_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY431_REC_MOT_ready <- FLY431_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0127_R <- transform(LOG_0127, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0127_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0127_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY431_REC_MOT_LD <- left_join(FLY431_REC_MOT_ready, LOG_0127_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY431_REC_MOT_LD_1 <- FLY431_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY431_REC_MOT_LD_1.2 <- FLY431_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY431_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY431_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY431_REC_MOT_LD_1.2 <- spike_cleaning(FLY431_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 300, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY431_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 15:01:10 (FLY_431 LOG_127)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY431_REC_MOT_LD_1.2$tilt_corrected <- FLY431_REC_MOT_LD_1.2$tilt_deg - 5
+FLY431_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY431_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY431_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY431_REC_MOT_LD_1.2$tilt_corrected, FLY431_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY431_REC_MOT_LD_1.2 <- correct_altitude(FLY431_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY431_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-18 15:01:10 (FLY_431 LOG_127)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY431_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY431_REC_MOT_LD_1.2 <- GAP3(FLY431_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(361, 371), c(381,391), c(411,541)))
+FLY431_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY431_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_431<- sd(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_431<- sd(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY431_REC_MOT_LD_1.2$relative_diff <- FLY431_REC_MOT_LD_1.2$diff_col / mean(FLY431_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY431_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY431_REC_MOT_LD_1.2 <- FLY431_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY431 <- FLY431_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY431 <- df_FLY431 %>% rename(seconds_FLY431 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY431 <- df_FLY431 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY431, aes(x = seconds_FLY431, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_434 + LOG129 ####
+# Import csv
+FLY434_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY434_REC_MOT.csv")
+# Import LOG 
+LOG_0129 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0129.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY434_REC_MOT_clean <- distinct(FLY434_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY434_REC_MOT_ready <- FLY434_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0129_R <- transform(LOG_0129, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0129_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0129_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY434_REC_MOT_LD <- left_join(FLY434_REC_MOT_ready, LOG_0129_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY434_REC_MOT_LD_1 <- FLY434_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY434_REC_MOT_LD_1.2 <- FLY434_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY434_REC_MOT_LD_1.2 <- spike_cleaning(FLY434_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 180, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY434_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-27 06:49:40 (FLY_434 LOG_129)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY434_REC_MOT_LD_1.2$tilt_corrected <- FLY434_REC_MOT_LD_1.2$tilt_deg - 5
+FLY434_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY434_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY434_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY434_REC_MOT_LD_1.2$tilt_corrected, FLY434_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY434_REC_MOT_LD_1.2 <- correct_altitude(FLY434_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY434_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-06-27 06:49:40 (FLY_434 LOG_129)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY434_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY434_REC_MOT_LD_1.2 <- GAP3(FLY434_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(231, 471), c(541,641)))
+FLY434_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY434_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_434<- sd(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_434<- sd(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY434_REC_MOT_LD_1.2$relative_diff <- FLY434_REC_MOT_LD_1.2$diff_col / mean(FLY434_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY434_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY434_REC_MOT_LD_1.2 <- FLY434_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY434 <- FLY434_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY434 <- df_FLY434 %>% rename(seconds_FLY434 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY434 <- df_FLY434 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY434, aes(x = seconds_FLY434, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_436 + LOG131 ####
+# Import csv
+FLY436_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY436_REC_MOT.csv")
+# Import LOG 
+LOG_0131 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0131.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY436_REC_MOT_clean <- distinct(FLY436_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY436_REC_MOT_ready <- FLY436_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0131_R <- transform(LOG_0131, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0131_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0131_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY436_REC_MOT_LD <- left_join(FLY436_REC_MOT_ready, LOG_0131_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY436_REC_MOT_LD_1 <- FLY436_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY436_REC_MOT_LD_1.2 <- FLY436_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY436_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY436_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY436_REC_MOT_LD_1.2 <- spike_cleaning(FLY436_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 55, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY436_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-11 13:05:32 (FLY_436 LOG_131)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY436_REC_MOT_LD_1.2$tilt_corrected <- FLY436_REC_MOT_LD_1.2$tilt_deg - 5
+FLY436_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY436_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY436_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY436_REC_MOT_LD_1.2$tilt_corrected, FLY436_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY436_REC_MOT_LD_1.2 <- correct_altitude(FLY436_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY436_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-11 13:05:32 (FLY_436 LOG_131)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY436_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY436_REC_MOT_LD_1.2 <- GAP3(FLY436_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(131, 161), c(180,260)))
+FLY436_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY436_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_436<- sd(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_436<- sd(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY436_REC_MOT_LD_1.2$relative_diff <- FLY436_REC_MOT_LD_1.2$diff_col / mean(FLY436_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY436_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY436_REC_MOT_LD_1.2 <- FLY436_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY436 <- FLY436_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY436 <- df_FLY436 %>% rename(seconds_FLY436 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY436 <- df_FLY436 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY436, aes(x = seconds_FLY436, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_437 + LOG132 ####
+# Import csv
+FLY437_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY437_REC_MOT.csv")
+# Import LOG 
+LOG_0132 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0132.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY437_REC_MOT_clean <- distinct(FLY437_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY437_REC_MOT_ready <- FLY437_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0132_R <- transform(LOG_0132, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0132_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0132_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY437_REC_MOT_LD <- left_join(FLY437_REC_MOT_ready, LOG_0132_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY437_REC_MOT_LD_1 <- FLY437_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY437_REC_MOT_LD_1.2 <- FLY437_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY437_REC_MOT_LD_1.2 <- spike_cleaning(FLY437_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 85, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY437_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-11 13:27:01 (FLY_437 LOG_132)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY437_REC_MOT_LD_1.2$tilt_corrected <- FLY437_REC_MOT_LD_1.2$tilt_deg - 5
+FLY437_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY437_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY437_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY437_REC_MOT_LD_1.2$tilt_corrected, FLY437_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY437_REC_MOT_LD_1.2 <- correct_altitude(FLY437_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY437_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-11 13:27:01 (FLY_437 LOG_132)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY437_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY437_REC_MOT_LD_1.2 <- GAP3(FLY437_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(121,261), c(291,301), c(311,321), c(331,381)))
+FLY437_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY437_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_437<- sd(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_437<- sd(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY437_REC_MOT_LD_1.2$relative_diff <- FLY437_REC_MOT_LD_1.2$diff_col / mean(FLY437_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY437_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY437_REC_MOT_LD_1.2 <- FLY437_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY437 <- FLY437_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY437 <- df_FLY437 %>% rename(seconds_FLY437 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY401 <- df_FLY401 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY437, aes(x = seconds_FLY437, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_438 + LOG133 ####
+# Import csv
+FLY438_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY438_REC_MOT.csv")
+# Import LOG 
+LOG_0133 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0133.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY438_REC_MOT_clean <- distinct(FLY438_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY438_REC_MOT_ready <- FLY438_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0133_R <- transform(LOG_0133, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0133_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0133_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY438_REC_MOT_LD <- left_join(FLY438_REC_MOT_ready, LOG_0133_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY438_REC_MOT_LD_1 <- FLY438_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY438_REC_MOT_LD_1.2 <- FLY438_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY438_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY438_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY438_REC_MOT_LD_1.2 <- spike_cleaning(FLY438_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 120, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY438_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-11 16:25:01 (FLY_438 LOG_133)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY438_REC_MOT_LD_1.2$tilt_corrected <- FLY438_REC_MOT_LD_1.2$tilt_deg - 5
+FLY438_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY438_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY438_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY438_REC_MOT_LD_1.2$tilt_corrected, FLY438_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY438_REC_MOT_LD_1.2 <- correct_altitude(FLY438_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY438_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-11 16:25:01 (FLY_438 LOG_133)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY438_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY438_REC_MOT_LD_1.2 <- GAP3(FLY438_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(131, 511), c(531, 551), c(581, 601)))
+FLY438_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY438_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_401<- sd(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_401<- sd(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY438_REC_MOT_LD_1.2$relative_diff <- FLY438_REC_MOT_LD_1.2$diff_col / mean(FLY438_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY438_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY438_REC_MOT_LD_1.2 <- FLY438_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY438 <- FLY438_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY438 <- df_FLY438 %>% rename(seconds_FLY438 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY438 <- df_FLY438 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY438, aes(x = seconds_FLY438, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_440 + LOG134 ####
+# Import csv
+FLY440_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY440_REC_MOT.csv")
+# Import LOG 
+LOG_0134 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0134.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY440_REC_MOT_clean <- distinct(FLY440_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY440_REC_MOT_ready <- FLY440_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0134_R <- transform(LOG_0134, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0134_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0134_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY440_REC_MOT_LD <- left_join(FLY440_REC_MOT_ready, LOG_0134_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY440_REC_MOT_LD_1 <- FLY440_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY440_REC_MOT_LD_1.2 <- FLY440_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY440_REC_MOT_LD_1.2 <- spike_cleaning(FLY440_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 170, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY440_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-17 07:19:17 (FLY_440 LOG_134)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY440_REC_MOT_LD_1.2$tilt_corrected <- FLY440_REC_MOT_LD_1.2$tilt_deg - 5
+FLY440_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY440_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY440_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY440_REC_MOT_LD_1.2$tilt_corrected, FLY440_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY440_REC_MOT_LD_1.2 <- correct_altitude(FLY440_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY440_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-17 07:19:17 (FLY_440 LOG_134)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY440_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY440_REC_MOT_LD_1.2 <- GAP3(FLY440_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(325, 561), c(581,641), c(761,781)))
+FLY440_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY440_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_440<- sd(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_440<- sd(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY440_REC_MOT_LD_1.2$relative_diff <- FLY440_REC_MOT_LD_1.2$diff_col / mean(FLY440_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY440_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY440_REC_MOT_LD_1.2 <- FLY440_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY440 <- FLY440_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY440 <- df_FLY440 %>% rename(seconds_FLY440 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY440 <- df_FLY440 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY440, aes(x = seconds_FLY440, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_444 + LOG138 #### 
+# Import csv
+FLY444_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY444_REC_MOT.csv")
+# Import LOG 
+LOG_0138 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0138.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY444_REC_MOT_clean <- distinct(FLY444_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY444_REC_MOT_ready <- FLY444_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0138_R <- transform(LOG_0138, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0138_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0138_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY444_REC_MOT_LD <- left_join(FLY444_REC_MOT_ready, LOG_0138_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY444_REC_MOT_LD_1 <- FLY444_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY444_REC_MOT_LD_1.2 <- FLY444_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY444_REC_MOT_LD_1.2 <- spike_cleaning(FLY444_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 70, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY444_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-17 11:42:43 (FLY_444 LOG_138)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY444_REC_MOT_LD_1.2$tilt_corrected <- FLY444_REC_MOT_LD_1.2$tilt_deg - 5
+FLY444_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY444_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY444_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY444_REC_MOT_LD_1.2$tilt_corrected, FLY444_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY444_REC_MOT_LD_1.2 <- correct_altitude(FLY444_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY444_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-17 11:42:43 (FLY_444 LOG_138)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY444_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY444_REC_MOT_LD_1.2 <- GAP3(FLY444_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(95, 261), c(271, 381), c(421,511)))
+FLY444_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY444_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_444<- sd(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_444<- sd(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY444_REC_MOT_LD_1.2$relative_diff <- FLY444_REC_MOT_LD_1.2$diff_col / mean(FLY444_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY444_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY444_REC_MOT_LD_1.2 <- FLY444_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY444 <- FLY444_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY444 <- df_FLY444 %>% rename(seconds_FLY444 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY444 <- df_FLY444 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY444, aes(x = seconds_FLY444, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_446 + LOG139 ####
+# Import csv
+FLY446_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY446_REC_MOT.csv")
+# Import LOG 
+LOG_0139 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0139.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY446_REC_MOT_clean <- distinct(FLY446_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY446_REC_MOT_ready <- FLY446_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0139_R <- transform(LOG_0139, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0139_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0139_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY446_REC_MOT_LD <- left_join(FLY446_REC_MOT_ready, LOG_0139_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY446_REC_MOT_LD_1 <- FLY446_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY446_REC_MOT_LD_1.2 <- FLY446_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY446_REC_MOT_LD_1.2 <- spike_cleaning(FLY446_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 51, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY446_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-29 12:42:31 (FLY_446 LOG_139)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY446_REC_MOT_LD_1.2$tilt_corrected <- FLY446_REC_MOT_LD_1.2$tilt_deg - 5
+FLY446_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY446_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY446_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY446_REC_MOT_LD_1.2$tilt_corrected, FLY446_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY446_REC_MOT_LD_1.2 <- correct_altitude(FLY446_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY446_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-29 12:42:31 (FLY_446 LOG_139)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY446_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY446_REC_MOT_LD_1.2 <- GAP3(FLY446_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(91, 161), c(211,241)))
+FLY446_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY446_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_446<- sd(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_446<- sd(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY446_REC_MOT_LD_1.2$relative_diff <- FLY446_REC_MOT_LD_1.2$diff_col / mean(FLY446_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY446_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY446_REC_MOT_LD_1.2 <- FLY446_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY446 <- FLY446_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY446 <- df_FLY446 %>% rename(seconds_FLY446 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY446 <- df_FLY446 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY446, aes(x = seconds_FLY446, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_447 + LOG140 ####
+# Import csv
+FLY447_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY447_REC_MOT.csv")
+# Import LOG 
+LOG_0140 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0140.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY447_REC_MOT_clean <- distinct(FLY447_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY447_REC_MOT_ready <- FLY447_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0140_R <- transform(LOG_0140, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0140_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0140_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY447_REC_MOT_LD <- left_join(FLY447_REC_MOT_ready, LOG_0140_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY447_REC_MOT_LD_1 <- FLY447_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY447_REC_MOT_LD_1.2 <- FLY447_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY447_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY447_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY447_REC_MOT_LD_1.2 <- spike_cleaning(FLY447_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY447_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "22023-07-29 12:56:18 (FLY_447 LOG_140)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY447_REC_MOT_LD_1.2$tilt_corrected <- FLY447_REC_MOT_LD_1.2$tilt_deg - 5
+FLY447_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY447_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY447_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY447_REC_MOT_LD_1.2$tilt_corrected, FLY447_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY447_REC_MOT_LD_1.2 <- correct_altitude(FLY447_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY447_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-07-29 12:56:18 (FLY_447 LOG_140)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY447_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY447_REC_MOT_LD_1.2 <- GAP3(FLY447_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(111, 241)))
+FLY447_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY447_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_447<- sd(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_447<- sd(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY447_REC_MOT_LD_1.2$relative_diff <- FLY447_REC_MOT_LD_1.2$diff_col / mean(FLY447_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY447_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY447_REC_MOT_LD_1.2 <- FLY447_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY447 <- FLY447_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY447 <- df_FLY447 %>% rename(seconds_FLY447 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY447 <- df_FLY447 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY447, aes(x = seconds_FLY447, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_452 + LOG144 ####
+# Import csv
+FLY452_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY452_REC_MOT.csv")
+# Import LOG 
+LOG_0144 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0144.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY452_REC_MOT_clean <- distinct(FLY452_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY452_REC_MOT_ready <- FLY452_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0144_R <- transform(LOG_0144, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0144_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0144_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY452_REC_MOT_LD <- left_join(FLY452_REC_MOT_ready, LOG_0144_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY452_REC_MOT_LD_1 <- FLY452_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY452_REC_MOT_LD_1.2 <- FLY452_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY452_REC_MOT_LD_1.2 <- spike_cleaning(FLY452_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY452_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 13:07:48 (FLY_452 LOG_144)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY452_REC_MOT_LD_1.2$tilt_corrected <- FLY452_REC_MOT_LD_1.2$tilt_deg - 5
+FLY452_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY452_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY452_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY452_REC_MOT_LD_1.2$tilt_corrected, FLY452_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY452_REC_MOT_LD_1.2 <- correct_altitude(FLY452_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY452_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 13:07:48 (FLY_452 LOG_144)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY452_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY452_REC_MOT_LD_1.2 <- GAP3(FLY452_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(1, 221), c(241,321)))
+FLY452_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY452_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_452<- sd(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_452<- sd(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY452_REC_MOT_LD_1.2$relative_diff <- FLY452_REC_MOT_LD_1.2$diff_col / mean(FLY452_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY452_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY452_REC_MOT_LD_1.2 <- FLY452_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY452 <- FLY452_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY452 <- df_FLY452 %>% rename(seconds_FLY452 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY452 <- df_FLY452 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY452, aes(x = seconds_FLY452, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_456 + LOG148 ####
+# Import csv
+FLY456_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY456_REC_MOT.csv")
+# Import LOG 
+LOG_0148 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0148.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY456_REC_MOT_clean <- distinct(FLY456_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY456_REC_MOT_ready <- FLY456_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0148_R <- transform(LOG_0148, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0148_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0148_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY456_REC_MOT_LD <- left_join(FLY456_REC_MOT_ready, LOG_0148_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY456_REC_MOT_LD_1 <- FLY456_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY456_REC_MOT_LD_1.2 <- FLY456_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY456_REC_MOT_LD_1.2 <- spike_cleaning(FLY456_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY456_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 15:14:18 (FLY_456 LOG_148)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY456_REC_MOT_LD_1.2$tilt_corrected <- FLY456_REC_MOT_LD_1.2$tilt_deg - 5
+FLY456_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY456_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY456_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY456_REC_MOT_LD_1.2$tilt_corrected, FLY456_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY456_REC_MOT_LD_1.2 <- correct_altitude(FLY456_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY456_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 15:14:18 (FLY_456 LOG_148)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY456_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY456_REC_MOT_LD_1.2 <- GAP3(FLY456_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(41, 201)))
+FLY456_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY456_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_456<- sd(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_456<- sd(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY456_REC_MOT_LD_1.2$relative_diff <- FLY456_REC_MOT_LD_1.2$diff_col / mean(FLY456_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY456_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY456_REC_MOT_LD_1.2 <- FLY456_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY456 <- FLY456_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY456 <- df_FLY456 %>% rename(seconds_FLY456 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY456 <- df_FLY456 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY456, aes(x = seconds_FLY456, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_457 + LOG149 ####
+# Import csv
+FLY457_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY457_REC_MOT.csv")
+# Import LOG 
+LOG_0149 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0149.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY457_REC_MOT_clean <- distinct(FLY457_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY457_REC_MOT_ready <- FLY457_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0149_R <- transform(LOG_0149, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0149_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0149_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY457_REC_MOT_LD <- left_join(FLY457_REC_MOT_ready, LOG_0149_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY457_REC_MOT_LD_1 <- FLY457_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY457_REC_MOT_LD_1.2 <- FLY457_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY457_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0,0, head(FLY457_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -4))
+
+# Pulizia spikes 
+FLY457_REC_MOT_LD_1.2 <- spike_cleaning(FLY457_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY457_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 15:29:02 (FLY_457 LOG_149)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY457_REC_MOT_LD_1.2$tilt_corrected <- FLY457_REC_MOT_LD_1.2$tilt_deg - 5
+FLY457_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY457_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY457_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY457_REC_MOT_LD_1.2$tilt_corrected, FLY457_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY457_REC_MOT_LD_1.2 <- correct_altitude(FLY457_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY457_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 15:29:02 (FLY_457 LOG_149)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY457_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY457_REC_MOT_LD_1.2 <- GAP3(FLY457_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(71, 141)))
+FLY457_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY457_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_457<- sd(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_457<- sd(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY457_REC_MOT_LD_1.2$relative_diff <- FLY457_REC_MOT_LD_1.2$diff_col / mean(FLY457_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY457_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY457_REC_MOT_LD_1.2 <- FLY457_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY457 <- FLY457_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY457 <- df_FLY457 %>% rename(seconds_FLY457 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY457 <- df_FLY457 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY457, aes(x = seconds_FLY457, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_458 + LOG150 #### 
+# Import csv
+FLY458_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY458_REC_MOT.csv")
+# Import LOG 
+LOG_0150 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0150.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY458_REC_MOT_clean <- distinct(FLY458_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY458_REC_MOT_ready <- FLY458_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0150_R <- transform(LOG_0150, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0150_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0150_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY458_REC_MOT_LD <- left_join(FLY458_REC_MOT_ready, LOG_0150_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY458_REC_MOT_LD_1 <- FLY458_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY458_REC_MOT_LD_1.2 <- FLY458_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY458_REC_MOT_LD_1.2 <- spike_cleaning(FLY458_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 610, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY458_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 15:38:38 (FLY_458 LOG_150)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY458_REC_MOT_LD_1.2$tilt_corrected <- FLY458_REC_MOT_LD_1.2$tilt_deg - 5
+FLY458_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY458_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY458_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY458_REC_MOT_LD_1.2$tilt_corrected, FLY458_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY458_REC_MOT_LD_1.2 <- correct_altitude(FLY458_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY458_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-08 15:38:38 (FLY_458 LOG_150)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY458_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY458_REC_MOT_LD_1.2 <- GAP3(FLY458_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(671, 761)))
+FLY458_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY458_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_458<- sd(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_458<- sd(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY458_REC_MOT_LD_1.2$relative_diff <- FLY458_REC_MOT_LD_1.2$diff_col / mean(FLY458_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY458_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY458_REC_MOT_LD_1.2 <- FLY458_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY458 <- FLY458_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY458 <- df_FLY458 %>% rename(seconds_FLY458 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY458 <- df_FLY458 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY458, aes(x = seconds_FLY458, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_459 + LOG151 ####
+# Import csv
+FLY459_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY459_REC_MOT.csv")
+# Import LOG 
+LOG_0151 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0151.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY459_REC_MOT_clean <- distinct(FLY459_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY459_REC_MOT_ready <- FLY459_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0151_R <- transform(LOG_0151, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0151_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0151_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY459_REC_MOT_LD <- left_join(FLY459_REC_MOT_ready, LOG_0151_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY459_REC_MOT_LD_1 <- FLY459_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY459_REC_MOT_LD_1.2 <- FLY459_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY459_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY459_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY459_REC_MOT_LD_1.2 <- spike_cleaning(FLY459_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 60, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY459_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 09:57:52 (FLY_401 LOG_0094)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY459_REC_MOT_LD_1.2$tilt_corrected <- FLY459_REC_MOT_LD_1.2$tilt_deg - 5
+FLY459_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY459_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY459_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY459_REC_MOT_LD_1.2$tilt_corrected, FLY459_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY459_REC_MOT_LD_1.2 <- correct_altitude(FLY459_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY459_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-02-22 09:57:52 (FLY_401 LOG_0094)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY459_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY459_REC_MOT_LD_1.2 <- GAP3(FLY459_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(111, 411)))
+FLY459_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY459_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_459<- sd(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_459<- sd(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY459_REC_MOT_LD_1.2$relative_diff <- FLY459_REC_MOT_LD_1.2$diff_col / mean(FLY459_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY459_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY459_REC_MOT_LD_1.2 <- FLY459_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY459 <- FLY459_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY459 <- df_FLY459 %>% rename(seconds_FLY459 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY459 <- df_FLY459 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY459, aes(x = seconds_FLY459, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_461 + LOG152 ####
+# Import csv
+FLY461_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY461_REC_MOT.csv")
+# Import LOG 
+LOG_0152 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0152.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY461_REC_MOT_clean <- distinct(FLY461_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY461_REC_MOT_ready <- FLY461_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0152_R <- transform(LOG_0152, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0152_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0152_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY461_REC_MOT_LD <- left_join(FLY461_REC_MOT_ready, LOG_0152_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY461_REC_MOT_LD_1 <- FLY461_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY461_REC_MOT_LD_1.2 <- FLY461_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY461_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY461_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY461_REC_MOT_LD_1.2 <- spike_cleaning(FLY461_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 30, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY461_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 09:42:47 (FLY_461 LOG_152)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY461_REC_MOT_LD_1.2$tilt_corrected <- FLY461_REC_MOT_LD_1.2$tilt_deg - 5
+FLY461_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY461_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY461_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY461_REC_MOT_LD_1.2$tilt_corrected, FLY461_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY461_REC_MOT_LD_1.2 <- correct_altitude(FLY461_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY461_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 09:42:47 (FLY_461 LOG_152)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY461_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY461_REC_MOT_LD_1.2 <- GAP3(FLY461_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(81, 181), c(191,231), c(241,361), c(381,395)))
+FLY461_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY461_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_461<- sd(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_461<- sd(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY461_REC_MOT_LD_1.2$relative_diff <- FLY461_REC_MOT_LD_1.2$diff_col / mean(FLY461_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY461_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY461_REC_MOT_LD_1.2 <- FLY461_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY461 <- FLY461_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY461 <- df_FLY461 %>% rename(seconds_FLY461 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY461 <- df_FLY461 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY461, aes(x = seconds_FLY461, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_462 + LOG153 ####
+# Import csv
+FLY462_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY462_REC_MOT.csv")
+# Import LOG 
+LOG_0153 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0153.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY462_REC_MOT_clean <- distinct(FLY462_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY462_REC_MOT_ready <- FLY462_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0153_R <- transform(LOG_0153, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0153_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0153_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY462_REC_MOT_LD <- left_join(FLY462_REC_MOT_ready, LOG_0153_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY462_REC_MOT_LD_1 <- FLY462_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY462_REC_MOT_LD_1.2 <- FLY462_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY462_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0, head(FLY462_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -2))
+
+# Pulizia spikes 
+FLY462_REC_MOT_LD_1.2 <- spike_cleaning(FLY462_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY462_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 11:30:56 (FLY_462 LOG_153)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY462_REC_MOT_LD_1.2$tilt_corrected <- FLY462_REC_MOT_LD_1.2$tilt_deg - 5
+FLY462_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY462_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY462_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY462_REC_MOT_LD_1.2$tilt_corrected, FLY462_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY462_REC_MOT_LD_1.2 <- correct_altitude(FLY462_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY462_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 11:30:56 (FLY_462 LOG_153)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY462_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY462_REC_MOT_LD_1.2 <- GAP3(FLY462_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(21, 41), c(51,101), c(131,181)))
+FLY462_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY462_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_462<- sd(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_462<- sd(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY462_REC_MOT_LD_1.2$relative_diff <- FLY462_REC_MOT_LD_1.2$diff_col / mean(FLY462_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY462_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY462_REC_MOT_LD_1.2 <- FLY462_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY462 <- FLY462_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY462 <- df_FLY462 %>% rename(seconds_FLY462 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY462 <- df_FLY462 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY462, aes(x = seconds_FLY462, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_463 + LOG154  ####
+# Import csv
+FLY463_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY463_REC_MOT.csv")
+# Import LOG 
+LOG_0154 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0154.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY463_REC_MOT_clean <- distinct(FLY463_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY463_REC_MOT_ready <- FLY463_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0154_R <- transform(LOG_0154, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0154_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0154_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY463_REC_MOT_LD <- left_join(FLY463_REC_MOT_ready, LOG_0154_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY463_REC_MOT_LD_1 <- FLY463_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY463_REC_MOT_LD_1.2 <- FLY463_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY463_REC_MOT_LD_1.2 <- spike_cleaning(FLY463_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 150, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY463_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 11:40:01 (FLY_463 LOG_154)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY463_REC_MOT_LD_1.2$tilt_corrected <- FLY463_REC_MOT_LD_1.2$tilt_deg - 5
+FLY463_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY463_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY463_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY463_REC_MOT_LD_1.2$tilt_corrected, FLY463_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY463_REC_MOT_LD_1.2 <- correct_altitude(FLY463_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY463_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 11:40:01 (FLY_463 LOG_154)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY401_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY463_REC_MOT_LD_1.2 <- GAP3(FLY463_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(211, 221), c(251, 311), c(321, 481),c(561,578)))
+FLY463_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY463_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_463<- sd(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_463<- sd(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY463_REC_MOT_LD_1.2$relative_diff <- FLY463_REC_MOT_LD_1.2$diff_col / mean(FLY463_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY463_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY463_REC_MOT_LD_1.2 <- FLY463_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY463 <- FLY463_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY463 <- df_FLY463 %>% rename(seconds_FLY463 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY463 <- df_FLY463 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY463, aes(x = seconds_FLY463, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_464 + LOG155 ####
+# Import csv
+FLY464_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY464_REC_MOT.csv")
+# Import LOG 
+LOG_0155 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0155.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY464_REC_MOT_clean <- distinct(FLY464_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY464_REC_MOT_ready <- FLY464_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0155_R <- transform(LOG_0155, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0155_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0155_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY464_REC_MOT_LD <- left_join(FLY464_REC_MOT_ready, LOG_0155_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY464_REC_MOT_LD_1 <- FLY464_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY464_REC_MOT_LD_1.2 <- FLY464_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY464_REC_MOT_LD_1.2 <- spike_cleaning(FLY464_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 50, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY464_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 12:57:31 (FLY_464 LOG_155)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY464_REC_MOT_LD_1.2$tilt_corrected <- FLY464_REC_MOT_LD_1.2$tilt_deg - 5
+FLY464_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY464_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY464_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY464_REC_MOT_LD_1.2$tilt_corrected, FLY464_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY464_REC_MOT_LD_1.2 <- correct_altitude(FLY464_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY464_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 12:57:31 (FLY_464 LOG_155)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY464_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY464_REC_MOT_LD_1.2 <- GAP3(FLY464_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(181, 271), c(311,401),c(425,531)))
+FLY464_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY464_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_464<- sd(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_464<- sd(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY464_REC_MOT_LD_1.2$relative_diff <- FLY464_REC_MOT_LD_1.2$diff_col / mean(FLY464_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY464_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY464_REC_MOT_LD_1.2 <- FLY464_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY464 <- FLY464_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY464 <- df_FLY464 %>% rename(seconds_FLY464 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY464 <- df_FLY464 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY464, aes(x = seconds_FLY464, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_466 + LOG157 ####
+# Import csv
+FLY466_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY466_REC_MOT.csv")
+# Import LOG 
+LOG_0157 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0157.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY466_REC_MOT_clean <- distinct(FLY466_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY466_REC_MOT_ready <- FLY466_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0157_R <- transform(LOG_0157, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0157_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0157_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY466_REC_MOT_LD <- left_join(FLY466_REC_MOT_ready, LOG_0157_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY466_REC_MOT_LD_1 <- FLY466_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY466_REC_MOT_LD_1.2 <- FLY466_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# Clean "2015-10-21" value
+FLY466_REC_MOT_LD_1.2_clean <- subset(FLY466_REC_MOT_LD_1.2, !grepl("2015-10-21", GPS.dateTimeStamp))
+
+# Pulizia spikes 
+FLY466_REC_MOT_LD_1.2_clean <- spike_cleaning(FLY466_REC_MOT_LD_1.2_clean, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY466_REC_MOT_LD_1.2_clean, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 14:53:11 (FLY_466 LOG_157)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY466_REC_MOT_LD_1.2_clean$tilt_corrected <- FLY466_REC_MOT_LD_1.2_clean$tilt_deg - 5
+FLY466_REC_MOT_LD_1.2_clean$tilt_corrected <- ifelse(
+  is.na(FLY466_REC_MOT_LD_1.2_clean$tilt_corrected),
+  NA,
+  ifelse(FLY466_REC_MOT_LD_1.2_clean$tilt_corrected < 0, -FLY466_REC_MOT_LD_1.2_clean$tilt_corrected, FLY466_REC_MOT_LD_1.2_clean$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY466_REC_MOT_LD_1.2_clean <- correct_altitude(FLY466_REC_MOT_LD_1.2_clean)
+
+# check results by plotting
+ggplot(FLY466_REC_MOT_LD_1.2_clean, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-08-09 14:53:11 (FLY_466 LOG_157)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY466_REC_MOT_LD_1.2_clean), by = 20))
+
+# Calcola Gap 
+FLY466_REC_MOT_LD_1.2_clean <- GAP3(FLY466_REC_MOT_LD_1.2_clean, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(61, 71)))
+FLY466_REC_MOT_LD_1.2_clean$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY466_REC_MOT_LD_1.2_clean, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) - sd(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE) + sd(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_466<- sd(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)/mean(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+sd_466<- sd(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY466_REC_MOT_LD_1.2_clean$relative_diff <- FLY466_REC_MOT_LD_1.2_clean$diff_col / mean(FLY466_REC_MOT_LD_1.2_clean$diff_col, na.rm = TRUE)
+ggplot(FLY466_REC_MOT_LD_1.2_clean, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY466_REC_MOT_LD_1.2_clean <- FLY466_REC_MOT_LD_1.2_clean %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY466 <- FLY466_REC_MOT_LD_1.2_clean %>% select(seconds, relative_diff)
+df_FLY466 <- df_FLY466 %>% rename(seconds_FLY466 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY466 <- df_FLY466 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY466, aes(x = seconds_FLY466, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_472 + LOG_0161 ####
+# Import csv
+FLY472_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY472_REC_MOT.csv")
+# Import LOG 
+LOG_0161 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0161.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY472_REC_MOT_clean <- distinct(FLY472_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY472_REC_MOT_ready <- FLY472_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0161_R <- transform(LOG_0161, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0161_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0161_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY472_REC_MOT_LD <- left_join(FLY472_REC_MOT_ready, LOG_0161_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY472_REC_MOT_LD_1 <- FLY472_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY472_REC_MOT_LD_1.2 <- FLY472_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY472_REC_MOT_LD_1.2 <- spike_cleaning(FLY472_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY472_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 09:46:27 (FLY_472 LOG_161)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY472_REC_MOT_LD_1.2$tilt_corrected <- FLY472_REC_MOT_LD_1.2$tilt_deg - 5
+FLY472_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY472_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY472_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY472_REC_MOT_LD_1.2$tilt_corrected, FLY472_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY472_REC_MOT_LD_1.2 <- correct_altitude(FLY472_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY472_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 09:46:27 (FLY_472 LOG_161)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY472_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY472_REC_MOT_LD_1.2 <- GAP3(FLY472_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(481, 941)))
+FLY472_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY472_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_472<- sd(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_472<- sd(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY472_REC_MOT_LD_1.2$relative_diff <- FLY472_REC_MOT_LD_1.2$diff_col / mean(FLY472_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY472_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY472_REC_MOT_LD_1.2 <- FLY472_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY472 <- FLY472_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY472 <- df_FLY472 %>% rename(seconds_FLY472 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY472 <- df_FLY472 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY472, aes(x = seconds_FLY472, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+
+#### FLY_475 + LOG_0164 ####
+# Import csv
+FLY475_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY475_REC_MOT.csv")
+# Import LOG 
+LOG_0164 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0164.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY475_REC_MOT_clean <- distinct(FLY475_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY475_REC_MOT_ready <- FLY475_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0164_R <- transform(LOG_0164, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0164_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0164_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY475_REC_MOT_LD <- left_join(FLY475_REC_MOT_ready, LOG_0164_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY475_REC_MOT_LD_1 <- FLY475_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY475_REC_MOT_LD_1.2 <- FLY475_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY475_REC_MOT_LD_1.2 <- spike_cleaning(FLY475_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 0, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY475_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 13:10:01 (FLY_475 LOG_164)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY475_REC_MOT_LD_1.2$tilt_corrected <- FLY475_REC_MOT_LD_1.2$tilt_deg - 5
+FLY475_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY475_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY475_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY475_REC_MOT_LD_1.2$tilt_corrected, FLY475_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY475_REC_MOT_LD_1.2 <- correct_altitude(FLY475_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY475_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 13:10:01 (FLY_475 LOG_164)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY475_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY475_REC_MOT_LD_1.2 <- GAP3(FLY475_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(171, 251), c(311,351)))
+FLY475_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY475_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_475<- sd(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_475<- sd(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY475_REC_MOT_LD_1.2$relative_diff <- FLY475_REC_MOT_LD_1.2$diff_col / mean(FLY475_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY475_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY475_REC_MOT_LD_1.2 <- FLY475_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY475 <- FLY475_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY475 <- df_FLY475 %>% rename(seconds_FLY475 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY475 <- df_FLY475 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY475, aes(x = seconds_FLY475, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_477 + LOG_0166 ####
+FLY477_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY477_REC_MOT.csv")
+# Import LOG 
+LOG_0166 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0166.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY477_REC_MOT_clean <- distinct(FLY477_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY477_REC_MOT_ready <- FLY477_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0166_R <- transform(LOG_0166, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0166_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0166_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY477_REC_MOT_LD <- left_join(FLY477_REC_MOT_ready, LOG_0166_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY477_REC_MOT_LD_1 <- FLY477_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY477_REC_MOT_LD_1.2 <- FLY477_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY477_REC_MOT_LD_1.2 <- spike_cleaning(FLY477_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY477_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 13:54:01 (FLY_477 LOG_166)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY477_REC_MOT_LD_1.2$tilt_corrected <- FLY477_REC_MOT_LD_1.2$tilt_deg - 5
+FLY477_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY477_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY477_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY477_REC_MOT_LD_1.2$tilt_corrected, FLY477_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY477_REC_MOT_LD_1.2 <- correct_altitude(FLY477_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY477_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 13:54:01 (FLY_477 LOG_166)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY477_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY477_REC_MOT_LD_1.2 <- GAP3(FLY477_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(341, 411), c(421,431)))
+FLY477_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY477_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_477<- sd(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_477<- sd(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY477_REC_MOT_LD_1.2$relative_diff <- FLY477_REC_MOT_LD_1.2$diff_col / mean(FLY477_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY477_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY477_REC_MOT_LD_1.2 <- FLY477_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY477 <- FLY477_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY477 <- df_FLY477 %>% rename(seconds_FLY477 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY477 <- df_FLY477 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY477, aes(x = seconds_FLY477, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_478 + LOG_0167 ####
+# Import csv
+FLY478_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY478_REC_MOT.csv")
+# Import LOG 
+LOG_0167 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0167.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY478_REC_MOT_clean <- distinct(FLY478_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY478_REC_MOT_ready <- FLY478_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0167_R <- transform(LOG_0167, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0167_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0167_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY478_REC_MOT_LD <- left_join(FLY478_REC_MOT_ready, LOG_0167_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY478_REC_MOT_LD_1 <- FLY478_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY478_REC_MOT_LD_1.2 <- FLY478_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+# offset BAR to match with Lidar, max 3 rows meaning 
+FLY478_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]` <- c(0,0,0, head(FLY478_REC_MOT_LD_1.2$`osd_data:relativeHeight[meters]`, -3))
+
+# Pulizia spikes 
+FLY478_REC_MOT_LD_1.2 <- spike_cleaning(FLY478_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY478_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 14:18:011 (FLY_478 LOG_167)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY478_REC_MOT_LD_1.2$tilt_corrected <- FLY478_REC_MOT_LD_1.2$tilt_deg - 5
+FLY478_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY478_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY478_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY478_REC_MOT_LD_1.2$tilt_corrected, FLY478_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY478_REC_MOT_LD_1.2 <- correct_altitude(FLY478_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY478_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-09-11 14:18:011 (FLY_478 LOG_167)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY478_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY478_REC_MOT_LD_1.2 <- GAP3(FLY478_REC_MOT_LD_1.2, "laser_altitude_m_cleaned", "osd_data:relativeHeight[meters]", list(c(181,191),c(291),c(351,361)))
+FLY478_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY478_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_478<- sd(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_478<- sd(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY478_REC_MOT_LD_1.2$relative_diff <- FLY478_REC_MOT_LD_1.2$diff_col / mean(FLY478_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY478_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY478_REC_MOT_LD_1.2 <- FLY478_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY478 <- FLY478_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY478 <- df_FLY478 %>% rename(seconds_FLY478 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY478 <- df_FLY478 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY478, aes(x = seconds_FLY478, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_484 + LOG_0168 ####
+# Import csv
+FLY484_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY484_REC_MOT.csv")
+# Import LOG 
+LOG_0168 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0168.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY484_REC_MOT_clean <- distinct(FLY484_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY484_REC_MOT_ready <- FLY484_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0168_R <- transform(LOG_0168, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0168_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0168_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY484_REC_MOT_LD <- left_join(FLY484_REC_MOT_ready, LOG_0168_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY484_REC_MOT_LD_1 <- FLY484_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY484_REC_MOT_LD_1.2 <- FLY484_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY484_REC_MOT_LD_1.2 <- spike_cleaning(FLY484_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 5, upper_limit = 80, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY484_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-10-13 08:43:40 (FLY_484 LOG_168)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY484_REC_MOT_LD_1.2$tilt_corrected <- FLY484_REC_MOT_LD_1.2$tilt_deg - 5
+FLY484_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY484_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY484_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY484_REC_MOT_LD_1.2$tilt_corrected, FLY484_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY484_REC_MOT_LD_1.2 <- correct_altitude(FLY484_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY484_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-10-13 08:43:40 (FLY_484 LOG_168)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY484_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY484_REC_MOT_LD_1.2 <- GAP3(FLY484_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(61, 431),c(561,621)))
+FLY484_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY484_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_484<- sd(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_484<- sd(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY484_REC_MOT_LD_1.2$relative_diff <- FLY484_REC_MOT_LD_1.2$diff_col / mean(FLY484_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY484_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY484_REC_MOT_LD_1.2 <- FLY484_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY484 <- FLY484_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY484 <- df_FLY484 %>% rename(seconds_FLY484 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY484 <- df_FLY484 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY484, aes(x = seconds_FLY484, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
+
+#### FLY_487 + LOG_0170 ####
+# Import csv
+FLY487_REC_MOT <- read_csv("Desktop/Matched 2/BAR/FLY487_REC_MOT.csv")
+# Import LOG 
+LOG_0170 <- read_table2("Desktop/Matched 2/LIDAR al 11_2023 copia/LOG_0170.CSV", 
+                        skip = 2)
+# Clean repetitions in `GPS:dateTimeStamp`
+FLY487_REC_MOT_clean <- distinct(FLY487_REC_MOT, `GPS:dateTimeStamp`, .keep_all = TRUE)
+# Rename FLY "`GPS:dateTimeStamp`" name 
+FLY487_REC_MOT_ready <- FLY487_REC_MOT_clean %>% rename(GPS.dateTimeStamp = `GPS:dateTimeStamp`)
+# Merge LOG Date and Time 
+LOG_0170_R <- transform(LOG_0170, `GPS:dateTimeStamp` = paste(`#gmt_date`, gmt_time, sep = " "))
+# Transform GPS.dateTimeStamp column from character to "POSIXct" "POSIXt" 
+LOG_0170_R$GPS.dateTimeStamp <- as.POSIXct(LOG_0170_R$GPS.dateTimeStamp, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+# Join FLY and LOG columns by GPS.dateTimeStamp
+FLY487_REC_MOT_LD <- left_join(FLY487_REC_MOT_ready, LOG_0170_R, by = "GPS.dateTimeStamp")
+# Laser data from cm to m
+FLY487_REC_MOT_LD_1 <- FLY487_REC_MOT_LD %>% mutate(laser_altitude_cm = laser_altitude_cm / 100)
+# Rename to meters
+FLY487_REC_MOT_LD_1.2 <- FLY487_REC_MOT_LD_1 %>% rename(laser_altitude_m = laser_altitude_cm)
+
+# Pulizia spikes 
+FLY487_REC_MOT_LD_1.2 <- spike_cleaning(FLY487_REC_MOT_LD_1.2, column_name = "laser_altitude_m", new_column_name = "laser_altitude_m_cleaned", 
+                                        lower_limit = 10, upper_limit = 60, omit_first_n = 0, omit_last_n = 0)
+
+# check results by plotting
+ggplot(FLY487_REC_MOT_LD_1.2, aes(x = GPS.dateTimeStamp)) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_cleaned, color = "Cleaned Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-10-14 15:19:01 (FLY_487 LOG_170)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold"))
+
+# Correggo tilt 
+FLY487_REC_MOT_LD_1.2$tilt_corrected <- FLY487_REC_MOT_LD_1.2$tilt_deg - 5
+FLY487_REC_MOT_LD_1.2$tilt_corrected <- ifelse(
+  is.na(FLY487_REC_MOT_LD_1.2$tilt_corrected),
+  NA,
+  ifelse(FLY487_REC_MOT_LD_1.2$tilt_corrected < 0, -FLY487_REC_MOT_LD_1.2$tilt_corrected, FLY487_REC_MOT_LD_1.2$tilt_corrected)
+)
+
+# Applicazione correzione tilt
+FLY487_REC_MOT_LD_1.2 <- correct_altitude(FLY487_REC_MOT_LD_1.2)
+
+# check results by plotting
+ggplot(FLY487_REC_MOT_LD_1.2, aes(x = seq_along(GPS.dateTimeStamp))) +
+  geom_line(aes(y = laser_altitude_m, color = "Raw Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = laser_altitude_m_corrected, color = "Corrected Lidar"), linetype = "solid", size = 0.5) +
+  geom_line(aes(y = `osd_data:relativeHeight[meters]`, color = "BAR"), linetype = "solid", size = 0.5) +
+  labs(title = "2023-10-14 15:19:01 (FLY_487 LOG_170)",
+       y = "Height",
+       x = "Time") +
+  theme_minimal() +
+  scale_color_manual(values = c("blue", "darkorange", "darkgray")) +
+  guides(color = guide_legend(title = NULL)) +
+  theme(legend.position = "top", plot.title = element_text(size = 10, face = "bold")) +
+  scale_x_continuous(breaks = seq(1, nrow(FLY487_REC_MOT_LD_1.2), by = 20))
+
+# Calcola Gap 
+FLY487_REC_MOT_LD_1.2 <- GAP3(FLY487_REC_MOT_LD_1.2, "laser_altitude_m_corrected", "osd_data:relativeHeight[meters]", list(c(201, 321),c(351,401),c(421,491)))
+FLY487_REC_MOT_LD_1.2$diff_col
+
+# Normalizza la differenza punto per punto, volo per volo
+ggplot(FLY487_REC_MOT_LD_1.2, aes(x = 1:length(diff_col), y = diff_col)) +
+  geom_line(color = "#FF934F", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  geom_hline(yintercept = mean(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "solid", color = "#2D3142") +
+  geom_hline(yintercept = mean(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) - sd(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  geom_hline(yintercept = mean(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE) + sd(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE),
+             linetype = "dashed", color = "#058ED9") +
+  theme_minimal()
+
+cv_487<- sd(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)/mean(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+sd_487<- sd(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+
+# differenza relativa
+FLY487_REC_MOT_LD_1.2$relative_diff <- FLY487_REC_MOT_LD_1.2$diff_col / mean(FLY487_REC_MOT_LD_1.2$diff_col, na.rm = TRUE)
+ggplot(FLY487_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff)) +
+  geom_line(color = "#058ED9", size = 1) +
+  labs(x = "Tempo", y = "Differenza (m)") +
+  ylim(0, 2) +
+  theme_minimal()
+
+# add seconds column
+FLY487_REC_MOT_LD_1.2 <- FLY487_REC_MOT_LD_1.2 %>%
+  mutate(
+    seconds = ifelse(!is.na(GPS.dateTimeStamp), cumsum(!is.na(GPS.dateTimeStamp)), NA))
+
+# Plot cloud
+
+df_FLY487 <- FLY487_REC_MOT_LD_1.2 %>% select(seconds, relative_diff)
+df_FLY487 <- df_FLY487 %>% rename(seconds_FLY487 = seconds)
+# Rinomina le colonne nel dataframe df_FLY304
+df_FLY487 <- df_FLY487 %>% rename_all(~sub("relative_diff_", "", .))
+
+
+ggplot(df_FLY487, aes(x = seconds_FLY487, y = relative_diff)) +
+  geom_point(color = "black", size = 0.2) +
+  labs(x = "Seconds", y = "Values", title = "Your Plot Title") +
+  theme_minimal()
 
 #### nuvola ####
 
@@ -3703,7 +8394,13 @@ library(ggplot2)
 list_of_data_frames <- list(df_FLY298,df_FLY299,df_FLY304,df_FLY306,df_FLY307,df_FLY310,df_FLY311,df_FLY312,
                             df_FLY313,df_FLY315,df_FLY316,df_FLY317,df_FLY318,df_FLY319,df_FLY323,df_FLY327,
                             df_FLY330,df_FLY332,df_FLY352,df_FLY353,df_FLY354,df_FLY365,df_FLY368,df_FLY371,
-                            df_FLY372,df_FLY374,df_FLY382,df_FLY383,df_FLY384)
+                            df_FLY372,df_FLY374,df_FLY382,df_FLY383,df_FLY384, df_FLY387,df_FLY388,df_FLY389,
+                            df_FLY393,df_FLY396,df_FLY400,df_FLY401,df_FLY402,df_FLY411,df_FLY412,df_FLY414,
+                            df_FLY417,df_FLY420,df_FLY421,df_FLY423,df_FLY424,df_FLY425,df_FLY427,df_FLY429,
+                            df_FLY430,df_FLY431,df_FLY434,df_FLY436,df_FLY437,df_FLY438,df_FLY440,df_FLY444,
+                            df_FLY446,df_FLY447,df_FLY452,df_FLY456,df_FLY456,df_FLY457,df_FLY458,df_FLY459,
+                            df_FLY461,df_FLY462,df_FLY463,df_FLY464,df_FLY466,df_FLY472,df_FLY475,df_FLY477,
+                            df_FLY478,df_FLY484,df_FLY487)
 
 # Rinomina le colonne "seconds" nei data frame
 list_of_data_frames <- lapply(list_of_data_frames, function(df) {
