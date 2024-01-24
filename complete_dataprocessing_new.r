@@ -19,6 +19,7 @@ library(hms)
 library(stringr)
 library(tidyverse)
 library(tidyr)
+library(purrr)
 
 options(scipen = 999) 
 
