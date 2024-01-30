@@ -1,6 +1,7 @@
 #### VOLI CON MISURAZIONI ####
 
-## Packages 
+#### Packages ####
+
 library(pastecs)
 library(readr)
 library(dplyr)
@@ -11,6 +12,9 @@ library(stringr)
 library(tidyverse)
 library(tidyr)
 library(purrr)
+library(lme4)
+library(sjPlot)
+library(modelsummary)
 
 ### funciotions ####
 azzera_dataset <- function(dataset) {
@@ -3621,4 +3625,21 @@ ggplot(FLY307_REC_MOT_LD_1.2, aes(x = 1:length(relative_diff), y = relative_diff
   theme_minimal()
 
 
+
+#### Mixed Effect #### 
+
+all_df <- bind_rows(df_304,df_307,df_310,df_330,df_365,df_368,df_401,df_401,
+                    df_412,df_417,df_420,df_421,df_425,df_437,df_440,df_444)
+
+
+mixed_model_error <- lmer(Error ~ scale(second) + (scale(second) | Flight_ID) , data = all_df, REML = FALSE,
+                   control = lmerControl(optimizer ="Nelder_Mead"))
+
+plot_all_df <- ggplot(all_df, aes(x = second, y = Error, color = Flight_ID)) +
+  geom_point() + geom_smooth(method = "lm", fill = NA) 
+
+plot_mfx_error <- plot_model(mixed_model_error, type = "pred", terms = c("second"), show.data = TRUE)
+
+modelsummary::get_gof(mixed_model_error)
+# r2.conditional = 0.9033624
 
